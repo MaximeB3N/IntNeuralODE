@@ -134,8 +134,11 @@ class BouncingBall(Box):
 
         return self.x, self.y
 
-GRAVITY_ACCELERATION = 1e1
-FRICTION = 0.5
+# GRAVITY_ACCELERATION = 3.0e1
+GRAVITY_ACCELERATION = 9.0e1
+
+# FRICTION = 1.
+FRICTION = 1.5
 
 class GravityHoleBall(Box):
     def __init__(self, x, y, vx, vy, box_size, object_size, gravity_position=None):

@@ -207,7 +207,8 @@ class ANODENet(nn.Module):
 
     def forward(self, x, t, return_features=False):
         features = self.odeblock(x, eval_times=t)
-        pred = self.linear_layer(features)
+        # pred = self.linear_layer(features)
         # if return_features:
         #     return features, pred
-        return pred
+        # print(features.shape)
+        return features[..., :self.output_dim]

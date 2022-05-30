@@ -31,7 +31,7 @@ class ODEfunc(nn.Module):
         self.out_dim = out_dim
         self.mid_dim = mid_dim
 
-        layers = [nn.Linear(in_dim + 1, self.mid_dim[0]),
+        layers = [nn.Linear(in_dim, self.mid_dim[0]),
             nn.ReLU()]
 
         for i in range(len(self.mid_dim) - 1):
@@ -43,8 +43,9 @@ class ODEfunc(nn.Module):
 
     def forward(self, t, x):
         # from dim [1, 2] and [] to [1, 3]
-        t = t.reshape(x.shape[0], 1)
-        input_tensor = torch.cat((x, t), dim=1)
+        # t = t.reshape(x.shape[0], 1)
+        # input_tensor = torch.cat((x, t), dim=1)
+        input_tensor = x
         return self.seq(input_tensor)
 
 
@@ -247,7 +248,9 @@ def train(model, optimizer, scheduler, epochs, batch_size, getter, display=100, 
             # compute the output of the model
             out = model(batch_init_positions, batch_times)
             # compute the loss
-            loss += 100*F.mse_loss(out[:, -1].view(-1,batch_init_positions.shape[-1]), batch_true_positions[:].view(-1,batch_init_positions.shape[-1]))
+            # print(out.shape, out.view(-1, batch_init_positions.shape[-1]).shape)
+            # print(batch_true_positions.shape, batch_true_positions.view(-1, batch_init_positions.shape[-1]).shape)
+            loss += 100.*F.mse_loss(out[:].view(-1,batch_init_positions.shape[-1]), batch_true_positions[:].view(-1,batch_init_positions.shape[-1]))
             
         loss /= batch_size
         optimizer.zero_grad()
