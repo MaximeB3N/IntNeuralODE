@@ -135,7 +135,9 @@ class BouncingBall(Box):
         return self.x, self.y
 
 # GRAVITY_ACCELERATION = 3.0e1
-GRAVITY_ACCELERATION = 9.0e1
+# GRAVITY_ACCELERATION = 9.0e1
+GRAVITY_ACCELERATION = 1.0e2
+
 
 # FRICTION = 1.
 FRICTION = 1.5
@@ -172,3 +174,26 @@ class GravityHoleBall(Box):
         self.position = np.array([self.x, self.y])
 
         return self.x, self.y
+
+    def reset(self, **kwargs):
+        if 'x0' in kwargs:
+            self.x0 = kwargs['x0']
+        if 'y0' in kwargs:
+            self.y0 = kwargs['y0']
+        if 'vx0' in kwargs:
+            self.vx0 = kwargs['vx0']
+        if 'vy0' in kwargs:
+            self.vy0 = kwargs['vy0']
+
+        self.x = np.copy(self.x0)
+        self.y = np.copy(self.y0)
+        self.vx = np.copy(self.vx0)
+        self.vy = np.copy(self.vy0)
+
+        self.position = np.copy(np.array([self.x, self.y]))
+        self.velocity = np.copy(np.array([self.vx, self.vy]))
+
+        return self.x, self.y
+        
+
+    
