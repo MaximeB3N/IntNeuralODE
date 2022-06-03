@@ -13,6 +13,7 @@ class ConvAE(nn.Module):
         self.height = kwargs['height']
         self.width = kwargs['width']
         self.latent_dim = kwargs['latent_dim']
+
         if not kwargs['in_channels'] is None:
             self.in_channels = kwargs['in_channels']
         else:
@@ -24,15 +25,22 @@ class ConvAE(nn.Module):
         else:
             self.relu = False
 
+        if isinstance(kwargs["activation"], nn.Module):
+            self.activation = kwargs["activation"]
+
+        else:
+            self.activation = nn.ReLU()
+
+
         self.encoder = nn.Sequential(
                     nn.Conv2d(in_channels=self.in_channels, out_channels=32, kernel_size=5, stride=2, padding=1),
-                    nn.ReLU(),
+                    self.activation,
                     # nn.MaxPool2d(kernel_size=2, stride=2),
                     nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=1),
-                    nn.ReLU(),
+                    self.activation,
                     # nn.MaxPool2d(kernel_size=2, stride=2),
                     nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1),
-                    nn.ReLU()
+                    self.activation
                     # nn.MaxPool2d(kernel_size=2, stride=2),
 
         )
@@ -44,13 +52,13 @@ class ConvAE(nn.Module):
 
         self.decoder_linear = nn.Sequential(
                     nn.Linear(in_features=self.latent_dim, out_features=3*3*128),
-                    nn.ReLU()
+                    self.activation
         )
         self.decoder = nn.Sequential(
                     nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=3, stride=2, padding=0),
-                    nn.ReLU(),
+                    self.activation,
                     nn.ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=4, stride=2, padding=1),
-                    nn.ReLU(),
+                    self.activation,
                     nn.ConvTranspose2d(in_channels=32, out_channels=self.in_channels, kernel_size=4, stride=2, padding=1),
                     nn.Sigmoid()
         )

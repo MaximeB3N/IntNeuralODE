@@ -1,12 +1,10 @@
-from pickle import MARK
-from aiohttp import payload_type
 import pygame
 from time import time
 import numpy as np 
 
 from box import BouncingBall, GravityHoleBall
 
-from utils import gaussian_density, add_spatial_encoding
+from src.utils.utils import gaussian_density, add_spatial_encoding
 
 INITIAL_SIZE = (28, 28)
 WIDTH, HEIGHT = 100, 100

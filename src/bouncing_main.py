@@ -2,7 +2,7 @@ import pygame
 from time import time
 import numpy as np 
 
-from box import BouncingBall, GravityHoleBall
+from src.box import BouncingBall, GravityHoleBall
 
 WIDTH, HEIGHT = 800, 800
 BOX_SIZE = (WIDTH, HEIGHT)

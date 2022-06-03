@@ -1,6 +1,5 @@
 import numpy as np
 
-import matplotlib.pyplot as plt
 
 from bokeh.layouts import layout
 from bokeh.models import Div, RangeSlider, Spinner, Slider

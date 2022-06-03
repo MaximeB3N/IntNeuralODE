@@ -39,6 +39,7 @@ class ODEFunc(nn.Module):
             self.fc1 = nn.Linear(self.input_dim + 1, hidden_dim)
         else:
             self.fc1 = nn.Linear(self.input_dim, hidden_dim)
+
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.fc3 = nn.Linear(hidden_dim, self.input_dim)
 
@@ -186,7 +187,7 @@ class ANODENet(nn.Module):
         If True calculates gradient with adjoint method, otherwise
         backpropagates directly through operations of ODE solver.
     """
-    def __init__(self, device, data_dim, hidden_dim, output_dim=1,
+    def __init__(self, device, data_dim, hidden_dim, out_dim=1,
                  augment_dim=0, time_dependent=False, non_linearity='relu',
                  tol=1e-3, adjoint=False):
         super(ANODENet, self).__init__()
@@ -194,7 +195,7 @@ class ANODENet(nn.Module):
         self.data_dim = data_dim
         self.hidden_dim = hidden_dim
         self.augment_dim = augment_dim
-        self.output_dim = output_dim
+        self.out_dim = out_dim
         self.time_dependent = time_dependent
         self.tol = tol
 
@@ -202,8 +203,10 @@ class ANODENet(nn.Module):
                           time_dependent, non_linearity)
 
         self.odeblock = ODEBlock(device, odefunc, tol=tol, adjoint=adjoint)
+
         self.linear_layer = nn.Linear(self.odeblock.odefunc.input_dim,
-                                      self.output_dim)
+                                      self.out_dim)
+
 
     def forward(self, x, t, return_features=False):
         features = self.odeblock(x, eval_times=t)
@@ -211,4 +214,4 @@ class ANODENet(nn.Module):
         # if return_features:
         #     return features, pred
         # print(features.shape)
-        return features[..., :self.output_dim]
+        return features[..., :self.out_dim]

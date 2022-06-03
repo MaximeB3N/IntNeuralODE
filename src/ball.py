@@ -5,7 +5,7 @@ from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 from tqdm.notebook import trange
 
-from src.utils import gaussian_density
+from src.utils.utils import gaussian_density
 
 
 class Ball:
