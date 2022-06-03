@@ -1,10 +1,12 @@
 import pygame
 from time import time
 import numpy as np 
+import sys
 
-from box import BouncingBall, GravityHoleBall
+sys.path.append("..")
 
-from src.utils.utils import gaussian_density, add_spatial_encoding
+from src.data.box import BouncingBall, GravityHoleBall
+from src.utils.utils import gaussian_density
 
 INITIAL_SIZE = (28, 28)
 WIDTH, HEIGHT = 100, 100

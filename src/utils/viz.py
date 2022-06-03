@@ -4,6 +4,7 @@ from plotly.subplots import make_subplots
 import plotly.graph_objs as go
 from ipywidgets import interact
 import torch
+from torch.utils.data import DataLoader
 from sklearn.decomposition import PCA
 
 
@@ -83,7 +84,7 @@ def plot_tsne_and_pca_portrait(times, tsne_encoded_trajectory, pca_encoded_traje
     plt.show()
 
 
-def display_results(i, model, out_display, getter, final_time, dt):
+def display_ode_trajectory(i, model, out_display, getter, final_time, dt):
 
     print("The graphs at epoch {}".format(i))
     with torch.no_grad():
@@ -165,3 +166,41 @@ def interactive_part_trajectory_image_plot(inputs_images, reconstructed_images, 
             fig.data[1].z = reconstructed_images[min(int(frac_predicted*t/dt), N_max_predicted)]
 
     return fig
+
+def display_auto_encoder_reconstruction(model, dataset, N_samples_recon):
+
+    # use the VAE to reconstruct images and there initial images
+    N_samples_recon = 6
+    plot_loader = DataLoader(dataset, batch_size=N_samples_recon)
+    model.eval()
+    with torch.no_grad():
+        limit = np.random.randint(0, int(len(dataset)/N_samples_recon))
+        for i, data in enumerate(plot_loader):
+            if i <= limit:
+                continue
+            if len(data) == 2:
+                input_image, _ = data
+            else:
+                # in that case data is the input image
+                input_image = data
+
+            input_image = input_image.float()
+            img = model(input_image)
+            img = img[:,0].cpu().detach().numpy()
+            img = np.reshape(img, (N_samples_recon, 28, 28))
+            input_image = input_image[:,0].cpu().detach().numpy()
+            input_image = np.reshape(input_image, (N_samples_recon, 28, 28))
+            height_plot = 5 
+            width_plot = height_plot * int(np.ceil(N_samples_recon/2))
+            fig, ax = plt.subplots(figsize=(width_plot,height_plot))
+            for i in range(N_samples_recon):
+                plt.subplot(2, N_samples_recon, i+1)
+                plt.imshow(img[i], cmap='gray')
+                plt.axis('off')
+                
+            for i in range(N_samples_recon):
+                plt.subplot(2, N_samples_recon, i+1+N_samples_recon)
+                plt.imshow(input_image[i], cmap='gray')
+                plt.axis('off')
+            plt.show()
+            break

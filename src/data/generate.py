@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from tqdm import trange
 
-from src.utils import gaussian_density
+from src.utils.utils import gaussian_density
 
 # Generation of the dataset of uniform gaussian ball over all the space 
 def create_gaussian_dataset(r_min, r_max, n_samples, size, margin=1., n_balls=1):
@@ -99,7 +99,7 @@ def generate_gravity_hole_ball_images(box, N, N_frames, dt, infos):
             trajectory.append(ball_img.copy())
 
         dataset.append(trajectory)
-    
+
     return np.array(dataset)
 
 

@@ -1,8 +1,11 @@
+import sys
 import pygame
 from time import time
 import numpy as np 
 
-from src.box import BouncingBall, GravityHoleBall
+sys.path.append("..")
+
+from src.data.box import BouncingBall, GravityHoleBall
 
 WIDTH, HEIGHT = 800, 800
 BOX_SIZE = (WIDTH, HEIGHT)
@@ -39,7 +42,8 @@ clock = pygame.time.Clock()
 
 x, y = box.move(0.)
 # place the object at its initial position in the screen
-screen.blit(box_img, (x, y))
+
+screen.blit(box_img, (int(x), int(y)))
 
 
 t=time()
@@ -59,7 +63,7 @@ while True:
     t = time()
     print(delta_t)
     x, y = box.move(delta_t)
-    screen.blit(box_img, (x, y))
+    screen.blit(box_img, (int(x), int(y)))
     # print(box.x, box.y)
 
     pygame.display.update()

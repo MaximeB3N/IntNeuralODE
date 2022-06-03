@@ -4,14 +4,23 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import trange
 
-from ..viz import display_results
+from .viz import display_ode_trajectory
 
 
 
 class batchGetter:
     def __init__(self, batch_time, n_samples, total_length, dt, positions, frac_train, noise=-1):
         self.times = torch.linspace(0., total_length*dt, total_length, dtype=torch.float64).float()
-        self.true_positions = torch.tensor(positions, dtype=torch.float64).float()
+        
+        if isinstance(positions, torch.Tensor):
+            self.true_positions = positions.float()
+
+        elif isinstance(positions, np.ndarray):
+            self.true_positions = torch.from_numpy(positions).float()
+
+        else:
+            assert False, "positions must be either a torch.Tensor or a np.ndarray"
+
         self.noise = noise
         self.N_train = int(positions.shape[0]*frac_train)
         if noise > 0 and noise < 1:
@@ -35,34 +44,6 @@ class batchGetter:
         batch_y = torch.stack([self.train_positions[s + i] for i in range(self.batch_time)], dim=0)  # (T, M, D)
         return batch_y0, batch_t, batch_y
 
-
-# class batchGetterMultiTrajectories:
-#     def __init__(self, batch_time, n_samples, total_length, dt, positions, frac_train, noise=-1):
-#         self.times = torch.linspace(0., total_length*dt, total_length, dtype=torch.float64).float()
-#         self.true_positions = torch.tensor(positions, dtype=torch.float64).float()
-#         self.noise = noise
-#         self.N_train = int(positions.shape[0]*frac_train)
-#         if noise > 0 and noise < 1:
-#             # adding gaussian noise to the true positions
-#             self.true_positions = self.true_positions + torch.normal(0, noise, size=self.true_positions.shape)
-#             self.true_positions = self.true_positions.float()
-
-#         self.train_times = self.times[:self.N_train]
-#         self.test_times = self.times[self.N_train:]
-#         self.train_positions = self.true_positions[:self.N_train]
-#         self.test_positions = self.true_positions[self.N_train:]
-#         self.n_samples = n_samples
-#         self.batch_time = batch_time
-#         self.dt = dt
-#         self.total_length = total_length
-
-#     def get_batch(self):
-#         s = torch.from_numpy(np.random.choice(np.arange(self.N_train - self.batch_time, dtype=np.int64), self.n_samples, replace=False))
-#         batch_y0 = self.train_positions[s]  # (M, D)
-#         batch_t = self.train_times[:self.batch_time]  # (T)
-#         batch_y = torch.stack([self.train_positions[s + i] for i in range(self.batch_time)], dim=0)  # (T, M, D)
-#         return batch_y0, batch_t, batch_y
-
 class BatchGetterMultiTrajectories:
     def __init__(self, batch_time, n_samples, total_length, dt, positions, frac_train):
         # N: number of trajectories
@@ -70,7 +51,15 @@ class BatchGetterMultiTrajectories:
         # D: dimension of the state space
         # positions: (N, T, D)
         self.times = torch.linspace(0., total_length*dt, total_length, dtype=torch.float64).float()
-        self.true_positions = torch.tensor(positions, dtype=torch.float64).float()
+        if isinstance(positions, torch.Tensor):
+            self.true_positions = positions.float()
+
+        elif isinstance(positions, np.ndarray):
+            self.true_positions = torch.from_numpy(positions).float()
+
+        else:
+            assert False, "positions must be either a torch.Tensor or a np.ndarray"
+
         self.N_train = int(positions.shape[0]*frac_train)
 
         self.train_times = self.times #[:self.N_train]
@@ -91,7 +80,7 @@ class BatchGetterMultiTrajectories:
         return batch_y0, batch_t, batch_y
 
 
-def train(model, optimizer, scheduler, epochs, batch_size, getter, display=100, display_results_fn=display_results, out_display=-1):
+def train(model, optimizer, scheduler, epochs, batch_size, getter, display=100, display_results_fn=display_ode_trajectory, out_display=-1):
     
     if out_display == -1:
         out_display = model.out_dim
