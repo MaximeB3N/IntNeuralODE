@@ -1,6 +1,4 @@
-from turtle import shape
 import numpy as np
-from sklearn.linear_model import lars_path
 import torch
 import torch.nn as nn
 import torchvision
@@ -131,6 +129,14 @@ class ConvNodeWithBatch(nn.Module):
 
         return reconstructed_images, sim
 
+    def encode(self, images):
+
+        return self.encoder(images)
+
+    def decode(self, latent_z):
+        return self.decoder(latent_z)
+
+
 
 
 class TimeDistributed(nn.Module):
@@ -170,10 +176,43 @@ class TimeDistributed(nn.Module):
         return y
 
 
+class LatentRegularizerLoss(nn.Module):
+    def __init__(self, device, reg_lambda, step_decay=1, decay_rate=0.9):
+        super(LatentRegularizerLoss, self).__init__()
+        self.device = device
+        self.reg_lambda = reg_lambda
+        self.image_loss = nn.MSELoss()
+        self.step_decay = step_decay
+        self.decay_rate = decay_rate
+        self._step = 0
 
+    def forward(self, latent_z, pred_images, true_images):
+        # latent_z: [batch, latent_dim]
+        # pred_images: [batch, n_stack, in_channels, height, width]
+        # true_images: [batch, n_stack, in_channels, height, width]
+        loss_img = self.image_loss(pred_images, true_images)
+        loss_reg = torch.norm(latent_z, p=2, dim=1).mean()
+        # print("loss_img: ", loss_img)
+        # print("loss_reg: ", loss_reg)
+        return loss_img + self.reg_lambda * loss_reg
+    
 
+    def step(self):
+        self._step +=1
+        if self._step % self.step_decay == 0:
+            self.reg_lambda = self.reg_lambda * self.decay_rate
+            
 
-
-
-
+    def forward_print(self, latent_z, pred_images, true_images):
+        # latent_z: [batch, latent_dim]
+        # pred_images: [batch, n_stack, in_channels, height, width]
+        # true_images: [batch, n_stack, in_channels, height, width]
+        loss_img = self.image_loss(pred_images, true_images)
+        loss_reg = torch.norm(latent_z, p=2, dim=1).mean()
+        print("-"*30)
+        print("loss_img: ", loss_img)
+        print("loss_reg: ", self.reg_lambda * loss_reg)
+        print("reg_lambda: ",self.reg_lambda)
+        print("-"*30)
+        return None
 

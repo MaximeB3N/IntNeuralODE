@@ -2,6 +2,7 @@
 /data/
 /models
 /runs/
+/images/AE_ODE/Gravity/MultiTrajectories/Together/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
