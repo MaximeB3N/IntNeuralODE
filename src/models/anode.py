@@ -206,6 +206,8 @@ class ANODENet(nn.Module):
 
         self.linear_layer = nn.Linear(self.odeblock.odefunc.input_dim,
                                       self.out_dim)
+    
+        print("Number of parameters in the model: {}".format(sum([p.numel() for p in self.parameters() if p.requires_grad])))
 
 
     def forward(self, x, t, return_features=False):

@@ -5,6 +5,84 @@ import torchvision
 import matplotlib.pyplot as plt
 from tqdm.notebook import trange
 
+class Encoder(nn.Module):
+    def __init__(self, device, latent_dim, in_channels,
+                    activation=nn.ReLU(), relu=False):
+        super(Encoder, self).__init__()
+        self.device = device
+        self.latent_dim = latent_dim
+        self.in_channels = in_channels
+        self.activation = activation
+        self.relu = relu
+
+        self.encoder = nn.Sequential(
+                    nn.Conv2d(in_channels=self.in_channels, out_channels=32, kernel_size=5, stride=2, padding=1),
+                    self.activation,
+                    # nn.MaxPool2d(kernel_size=2, stride=2),
+                    nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=1),
+                    self.activation,
+                    # nn.MaxPool2d(kernel_size=2, stride=2),
+                    nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1),
+                    self.activation
+                    # nn.MaxPool2d(kernel_size=2, stride=2),
+
+        )
+        
+        self.encoder_linear = nn.Sequential(
+                    nn.Flatten(),
+                    nn.Linear(in_features=3*3*128, out_features=self.latent_dim),
+        )
+        
+        # print the number of parameters in the model
+        print("Number of parameters in the encoder model: {}".format(np.sum([p.numel() for p in self.parameters() if p.requires_grad])))
+
+
+    def forward(self, image):
+        # print(image.shape)
+        out = self.encoder(image)
+        # print(out.shape)
+        latent = self.encoder_linear(out)
+        
+        if self.relu:
+            latent = torch.relu(latent)
+
+        return latent
+
+class Decoder(nn.Module):
+    def __init__(self, device, latent_dim, in_channels,
+                    activation=nn.ReLU()):
+        super(Decoder, self).__init__()
+        self.device = device
+        self.latent_dim = latent_dim
+        self.in_channels = in_channels
+        self.activation = activation
+
+        self.decoder_linear = nn.Sequential(
+                    nn.Linear(in_features=self.latent_dim, out_features=3*3*128),
+                    self.activation
+        )
+        self.decoder = nn.Sequential(
+                    nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=3, stride=2, padding=0),
+                    self.activation,
+                    nn.ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=4, stride=2, padding=1),
+                    self.activation,
+                    nn.ConvTranspose2d(in_channels=32, out_channels=self.in_channels, kernel_size=4, stride=2, padding=1),
+                    nn.Sigmoid()
+        )
+
+        # print the number of parameters in the model
+        print("Number of parameters in the decoder model: {}".format(np.sum([p.numel() for p in self.parameters() if p.requires_grad])))
+
+    def forward(self, latent):
+
+        out = self.decoder_linear(latent)
+        # print(out.shape)
+        out = out.view(latent.shape[0], 128, 3, 3)
+        # print(out.shape)
+        out = self.decoder(out)
+        # print(out.shape)
+        return out
+            
 
 class ConvAE(nn.Module):
     def __init__(self, **kwargs):
@@ -49,6 +127,7 @@ class ConvAE(nn.Module):
                     nn.Flatten(),
                     nn.Linear(in_features=3*3*128, out_features=self.latent_dim),
         )
+
 
         self.decoder_linear = nn.Sequential(
                     nn.Linear(in_features=self.latent_dim, out_features=3*3*128),

@@ -1,3 +1,6 @@
+from importlib.resources import path
+from logging import root
+from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from plotly.subplots import make_subplots
@@ -139,6 +142,81 @@ def display_ode_trajectory(i, model, out_display, getter, final_time, dt):
             plt.legend()
             plt.show()
         
+
+def display_convnode_trajectory(i, model, out_display, getter, final_time, dt, root=None, name=None):
+    
+    print("The graphs at epoch {}".format(i))
+    with torch.no_grad():
+        index = np.random.randint(0, getter.N_train)
+
+        times = torch.linspace(0, final_time*dt, final_time, dtype=torch.float64).float()
+
+        # print(dt)
+
+
+        predicted_output, predicted_latent = model(getter.train_images[index, :2], times, dt)
+        # print("out_shape", predicted_output.shape)
+        # print(predicted_latent.shape)
+        pca_encoded_trajectory = predicted_latent[:, :out_display].detach().numpy()
+        # print("encoded", pca_encoded_trajectory.shape)
+        # print(getter.train_positions[index].shape)
+        # print("train images", getter.train_images[index, :-1, :out_display].shape)
+        pca_train_trajectory = model.encode(getter.train_images[index, :-1, :out_display])
+        # print("train",  pca_train_trajectory.shape)
+
+        if pca_encoded_trajectory.shape[-1] > 2:
+
+            # display in orange the predicted position and in blue the true position of the training set
+            pca = PCA(n_components=2).fit(pca_train_trajectory)
+            pca_encoded_trajectory = pca.transform(pca_encoded_trajectory)
+            # print(getter.train_positions[index].shape)
+            pca_train_trajectory = pca.transform(pca_train_trajectory)
+
+        plt.figure(figsize=(15, 10))
+        if pca_encoded_trajectory.shape[-1] > 1:
+            plt.subplot(2, 3, 2)
+            plt.plot(pca_encoded_trajectory[:,0], 
+                    pca_encoded_trajectory[:,1], 'orange', label="Predicted")
+
+            plt.plot(pca_train_trajectory[:,0], pca_train_trajectory[:,1], 'b', label="Ground truth")
+
+            plt.xlabel("First coord")
+            plt.ylabel("Second coord")
+            plt.legend()
+            # plt.show()
+       
+
+        # print the X axis over the time
+        plt.subplot(2, 3, 1)
+        plt.plot(times, pca_train_trajectory[:,0], 'r', label="Ground truth Coord 1")
+        plt.plot(times, pca_encoded_trajectory[:,0], 'orange', label="Predicted Coord 1")
+        plt.xlabel("Time")
+        plt.ylabel("First coord of PCA")
+        plt.legend()
+        # plt.show()
+
+        if pca_encoded_trajectory.shape[-1] > 1:
+            plt.subplot(2, 3, 3)
+            plt.plot(times, pca_train_trajectory[:,1], 'r', label="Ground truth Coord 2")
+            plt.plot(times, pca_encoded_trajectory[:,1], 'orange', label="Predicted Coord 2")
+            plt.xlabel("Time")
+            plt.ylabel("Second coord of PCA")
+            plt.legend()
+            # plt.show()
+
+        index_img = np.random.randint(0, getter.train_images.shape[1]-1)
+        plt.subplot(2, 3, 4)
+        plt.imshow(getter.train_images[index, index_img, 0], cmap='gray')
+        plt.subplot(2, 3, 6)
+        plt.imshow(predicted_output[index_img, 0], cmap="gray")
+        
+        if root is None or name is None:
+            plt.show()
+
+        else:
+            plt.savefig(Path(root) /f"{name}_epochs_{i}.png")
+            plt.close()
+
 
 
 def interactive_part_trajectory_image_plot(inputs_images, reconstructed_images, time_steps, dt):
