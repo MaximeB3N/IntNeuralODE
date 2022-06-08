@@ -172,7 +172,7 @@ def display_convnode_trajectory(i, model, out_display, getter, final_time, dt, r
             # print(getter.train_positions[index].shape)
             pca_train_trajectory = pca.transform(pca_train_trajectory)
 
-        plt.figure(figsize=(15, 10))
+        fig = plt.figure(figsize=(15, 10))
         if pca_encoded_trajectory.shape[-1] > 1:
             plt.subplot(2, 3, 2)
             plt.plot(pca_encoded_trajectory[:,0], 
@@ -204,19 +204,21 @@ def display_convnode_trajectory(i, model, out_display, getter, final_time, dt, r
             plt.legend()
             # plt.show()
 
-        index_img = np.random.randint(0, getter.train_images.shape[1]-1)
+        index_img = np.random.randint((getter.train_images.shape[1]-1)//2, getter.train_images.shape[1]-1)
         plt.subplot(2, 3, 4)
         plt.imshow(getter.train_images[index, index_img, 0], cmap='gray')
+        plt.title(f"Image at time {index_img*dt:.3f}/{final_time*dt:.3f}")
         plt.subplot(2, 3, 6)
         plt.imshow(predicted_output[index_img, 0], cmap="gray")
+        plt.title(f"Predicted image at time {index_img*dt:.3f}/{final_time*dt:.3f}")
         
         if root is None or name is None:
             plt.show()
 
         else:
             plt.savefig(Path(root) /f"{name}_epochs_{i}.png")
-            plt.close()
-
+            plt.clf()
+            plt.close("all")
 
 
 def interactive_part_trajectory_image_plot(inputs_images, reconstructed_images, time_steps, dt):
