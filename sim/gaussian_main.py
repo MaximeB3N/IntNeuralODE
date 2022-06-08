@@ -9,7 +9,7 @@ from src.data.box import BouncingBall, GravityHoleBall
 from src.utils.utils import gaussian_density
 
 INITIAL_SIZE = (28, 28)
-WIDTH, HEIGHT = 100, 100
+WIDTH, HEIGHT = 500, 500
 BOX_SIZE = (WIDTH, HEIGHT)
 BACKGROUND_COLOR = (0, 0, 0)
 RANDOM_INIT = True
