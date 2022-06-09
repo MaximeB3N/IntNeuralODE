@@ -206,6 +206,8 @@ def train_convnode(model, optimizer, scheduler, epochs, batch_size, getter, disp
 
 def train_convnode_with_batch(model, optimizer, scheduler, epochs, getter, display=100, loss_fn=None, display_results_fn=display_ode_trajectory, out_display=-1):
     
+    device = model.device
+
     if out_display == -1:
         out_display = model.out_dim
 
@@ -220,6 +222,9 @@ def train_convnode_with_batch(model, optimizer, scheduler, epochs, getter, displ
         model.train()
         loss = 0.
         batch_init_images, batch_times, batch_true_images = getter.get_batch()
+        batch_init_images = batch_init_images.to(device)
+        batch_times = batch_times.to(device)
+        batch_true_images = batch_true_images.to(device)
         # compute the output of the model
         out_images, latent = model(batch_init_images, batch_times, getter.dt)
         # compute the loss
