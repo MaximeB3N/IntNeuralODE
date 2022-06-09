@@ -235,15 +235,13 @@ def train_convnode_with_batch(model, optimizer, scheduler, epochs, getter, displ
         iterator.set_postfix_str(f'Loss: {loss.item():.8f}')
         running_loss += loss.item()
 
+        scheduler.step()
+        loss_fn.step()
+
         if i % display == 0:
            display_results_fn(i, model, out_display, getter, getter.total_length, getter.dt)
            iterator.set_description_str(f'Display loss: {running_loss/display:.8f}')
            running_loss = 0.
            loss_fn.forward_print(latent, out_images[:], batch_true_images[:])
-
-        scheduler.step()
-        loss_fn.step()
-        
-        
         
     return None

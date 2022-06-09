@@ -217,8 +217,21 @@ def display_convnode_trajectory(i, model, out_display, getter, final_time, dt, r
 
         else:
             plt.savefig(Path(root) /f"{name}_epochs_{i}.png")
-            plt.clf()
-            plt.close("all")
+            fig.clf()
+            plt.close()
+
+def generate_interactive_plot(i, model, out_display, getter, final_time, dt, root=None, name=None):
+    index = np.random.randint(0, getter.N_train)
+    time_steps = np.linspace(0, final_time*dt, final_time)
+
+    times = torch.arange(0, final_time*dt, dt)
+
+    gd_images = getter.train_images[index, :-1]
+    input_images = getter.train_images[index, :2]
+
+    reconstructed_images, _ = model(input_images, times, dt)
+
+    return interactive_part_trajectory_image_plot(gd_images, reconstructed_images, time_steps, dt)
 
 
 def interactive_part_trajectory_image_plot(inputs_images, reconstructed_images, time_steps, dt):

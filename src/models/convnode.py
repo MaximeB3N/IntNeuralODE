@@ -61,7 +61,7 @@ class ConvNode(nn.Module):
 
 class ConvNodeWithBatch(nn.Module):
     def __init__(self, device, size, latent_dim, in_channels,
-    ode_hidden_dim, ode_out_dim, augment_dim=0, time_dependent=False, 
+    ode_hidden_dim, ode_out_dim, augment_dim=0, time_dependent=False, ode_linear_layer=False,
     ode_non_linearity='relu', conv_activation=nn.ReLU(),latent_activation=None, stack_size=1):
         super(ConvNodeWithBatch, self).__init__()
         self.device = device
@@ -74,6 +74,7 @@ class ConvNodeWithBatch(nn.Module):
         self.out_dim = ode_out_dim
         self.augment_dim = augment_dim
         self.time_dependent = time_dependent
+        self.ode_linear_layer = ode_linear_layer
         self.ode_non_linearity = ode_non_linearity
 
         print("-"*50)
@@ -94,7 +95,7 @@ class ConvNodeWithBatch(nn.Module):
         print("-"*50)
         print("Creating ANODENet...")
         self.node = ANODENet(device, latent_dim*(stack_size + 1), ode_hidden_dim, ode_out_dim, augment_dim, time_dependent=False,
-            non_linearity=ode_non_linearity).to(device)
+            non_linearity=ode_non_linearity, linear_layer=ode_linear_layer).to(device)
 
     def forward(self, images, times, dt):
         # images: [(batch), n_stack, in_channels, height, width]
@@ -115,7 +116,7 @@ class ConvNodeWithBatch(nn.Module):
         # print("latent_z_stack: ", latent_z_stack.shape)
 
         # sim : [times, (batch),ode_out_dim]
-        sim = self.node(latent_z_stack, times)[..., :latent_z.shape[-1]]
+        sim = self.node(latent_z_stack, times)
         # print("sim: ", sim.shape)
         # sim : [(batch), n_stack, ode_out_dim]
         if len(images.shape) == 5:
@@ -191,7 +192,7 @@ class LatentRegularizerLoss(nn.Module):
         # pred_images: [batch, n_stack, in_channels, height, width]
         # true_images: [batch, n_stack, in_channels, height, width]
         loss_img = self.image_loss(pred_images, true_images)
-        loss_reg = torch.norm(latent_z, p=2, dim=1).mean()
+        loss_reg = torch.linalg.norm(latent_z, ord=2, dim=-1).mean(dim=-1).mean(dim=-1)
         # print("loss_img: ", loss_img)
         # print("loss_reg: ", loss_reg)
         return loss_img + self.reg_lambda * loss_reg
@@ -200,7 +201,7 @@ class LatentRegularizerLoss(nn.Module):
     def step(self):
         self._step +=1
         if self._step % self.step_decay == 0:
-            self.reg_lambda = self.reg_lambda * self.decay_rate
+            self.reg_lambda *= self.decay_rate
             
 
     def forward_print(self, latent_z, pred_images, true_images):
@@ -208,11 +209,10 @@ class LatentRegularizerLoss(nn.Module):
         # pred_images: [batch, n_stack, in_channels, height, width]
         # true_images: [batch, n_stack, in_channels, height, width]
         loss_img = self.image_loss(pred_images, true_images)
-        loss_reg = torch.norm(latent_z, p=2, dim=1).mean()
-        print("-"*30)
+        loss_reg = torch.linalg.norm(latent_z, ord=2, dim=-1).mean(dim=-1).mean(dim=-1)
+        print("-"*30, "Loss prints", "-"*30)
         print("loss_img: ", loss_img)
         print("loss_reg: ", self.reg_lambda * loss_reg)
         print("reg_lambda: ",self.reg_lambda)
-        print("-"*30)
+        print("-"*73)
         return None
-

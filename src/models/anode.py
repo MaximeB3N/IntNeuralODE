@@ -189,7 +189,7 @@ class ANODENet(nn.Module):
     """
     def __init__(self, device, data_dim, hidden_dim, out_dim=1,
                  augment_dim=0, time_dependent=False, non_linearity='relu',
-                 tol=1e-3, adjoint=False):
+                 tol=1e-3, adjoint=False, linear_layer=False):
         super(ANODENet, self).__init__()
         self.device = device
         self.data_dim = data_dim
@@ -198,6 +198,8 @@ class ANODENet(nn.Module):
         self.out_dim = out_dim
         self.time_dependent = time_dependent
         self.tol = tol
+        self.linear_layer_bool = linear_layer
+        
 
         odefunc = ODEFunc(device, data_dim, hidden_dim, augment_dim,
                           time_dependent, non_linearity)
@@ -211,9 +213,15 @@ class ANODENet(nn.Module):
 
 
     def forward(self, x, t, return_features=False):
+        
+        # Logic check of implication 
+        assert (not return_features) or self.linear_layer, "You cannot return features if you don't use a linear layer"
         features = self.odeblock(x, eval_times=t)
-        # pred = self.linear_layer(features)
-        # if return_features:
-        #     return features, pred
+
+        if self.linear_layer_bool:
+            out = self.linear_layer(features)
+
+        if return_features:
+            return features, out
         # print(features.shape)
         return features[..., :self.out_dim]
