@@ -204,7 +204,7 @@ def train_convnode(model, optimizer, scheduler, epochs, batch_size, getter, disp
     return None
 
 
-def train_convnode_with_batch(model, optimizer, scheduler, epochs, getter, display=100, loss_fn=None, display_results_fn=display_ode_trajectory, out_display=-1):
+def train_convnode_with_batch(model, optimizers, scheduler, epochs, getter, display=100, loss_fn=None, display_results_fn=display_ode_trajectory, out_display=-1):
     
     device = model.device
 
@@ -233,6 +233,61 @@ def train_convnode_with_batch(model, optimizer, scheduler, epochs, getter, displ
         # print(out_images.shape, batch_true_images.shape)
         loss += loss_fn(latent, out_images[:], batch_true_images[:])
         # .view(-1,batch_init_positions.shape[-1])
+        
+        
+        for optimizer in optimizers:
+            optimizer.zero_grad()
+        loss.backward()
+
+        for optimizer in optimizers:
+            optimizer.step()
+        # update the progress bar
+        iterator.set_postfix_str(f'Loss: {loss.item():.8f}')
+        running_loss += loss.item()
+
+        scheduler.step()
+        loss_fn.step()
+
+        if i % display == 0:
+           display_results_fn(i, model, out_display, getter, getter.total_length, getter.dt)
+           iterator.set_description_str(f'Display loss: {running_loss/display:.8f}')
+           running_loss = 0.
+           loss_fn.forward_print(latent, out_images[:], batch_true_images[:])
+        
+    return None
+
+
+
+def train_convnode_with_batch_and_latent_supervision(model, optimizer, scheduler, epochs, getter, display=100, loss_fn=None, display_results_fn=display_ode_trajectory, out_display=-1):
+    
+    device = model.device
+
+    if out_display == -1:
+        out_display = model.out_dim
+
+    if loss_fn is None:
+        loss_fn = nn.MSELoss()
+    
+    iterator = trange(1, epochs+1)
+    # just for the plot part
+    running_loss = 0.
+    for i in iterator:
+        # get a random time sample
+        model.train()
+        loss = 0.
+        batch_init_images, batch_times, batch_true_images = getter.get_batch()
+        batch_init_images = batch_init_images.to(device)
+        batch_times = batch_times.to(device)
+        batch_true_images = batch_true_images.to(device)
+        # compute the output of the model
+        pred_images, pred_latent = model(batch_init_images, batch_times, getter.dt)
+        true_latent = model.encode(batch_true_images)
+        # compute the loss
+        # print(out.shape, out.view(-1, batch_init_positions.shape[-1]).shape)
+        # print(batch_true_positions.shape, batch_true_positions.view(-1, batch_init_positions.shape[-1]).shape)
+        # print(out_images.shape, batch_true_images.shape)
+        loss += loss_fn(pred_latent, true_latent, pred_images[:], batch_true_images[:])
+        # .view(-1,batch_init_positions.shape[-1])
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -247,6 +302,6 @@ def train_convnode_with_batch(model, optimizer, scheduler, epochs, getter, displ
            display_results_fn(i, model, out_display, getter, getter.total_length, getter.dt)
            iterator.set_description_str(f'Display loss: {running_loss/display:.8f}')
            running_loss = 0.
-           loss_fn.forward_print(latent, out_images[:], batch_true_images[:])
+           loss_fn.forward_print(pred_latent, true_latent, pred_images[:], batch_true_images[:])
         
     return None
