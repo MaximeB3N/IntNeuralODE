@@ -7,6 +7,7 @@ from tqdm.notebook import trange
 
 from .ae import ConvAE, Decoder, Encoder
 from .anode import ANODENet
+from .resnet import ResNetCustomEncoder, ResNetCustomDecoder, blockResNet
 
 
 class ConvNode(nn.Module):
@@ -139,7 +140,6 @@ class ConvNodeWithBatch(nn.Module):
 
 
 
-
 class TimeDistributed(nn.Module):
     def __init__(self, module, len_shape_without_batch, batch_first=False):
         super(TimeDistributed, self).__init__()
@@ -175,6 +175,163 @@ class TimeDistributed(nn.Module):
 
         # print('TimeDistributed: y return: ', y.shape)    
         return y
+
+
+class ResNodeWithBatch(nn.Module):
+    def __init__(self, device, size, latent_dim, in_channels, layers,
+    ode_hidden_dim, ode_out_dim, augment_dim=0, time_dependent=False, ode_linear_layer=False,
+    ode_non_linearity='relu', conv_activation=nn.ReLU(),latent_activation=None, stack_size=1):
+        super(ResNodeWithBatch, self).__init__()
+        self.device = device
+        self.size = size
+        self.latent_dim = latent_dim
+        self.in_channels = in_channels
+        self.layers = layers
+        self.conv_activation = conv_activation
+        self.latent_activation = latent_activation
+        self.ode_hidden_dim = ode_hidden_dim
+        self.out_dim = ode_out_dim
+        self.augment_dim = augment_dim
+        self.time_dependent = time_dependent
+        self.ode_linear_layer = ode_linear_layer
+        self.ode_non_linearity = ode_non_linearity
+
+        print("-"*50)
+        print("Creating ConvAE...")
+        self.encoder = TimeDistributed(
+            ResNetCustomEncoder(layers, in_channels, n_latent=latent_dim, expansion=4)
+            .to(device),
+            len_shape_without_batch=4, # input without batch are (times, latent_dim)
+            batch_first=True
+        )
+        self.decoder = TimeDistributed(
+            ResNetCustomDecoder(img_channel=in_channels, n_latent=latent_dim).to(device),
+            len_shape_without_batch=2, # input without batch are (times, latent_dim)
+            batch_first=True
+        )
+
+        print("-"*50)
+        print("Creating ANODENet...")
+        self.node = ANODENet(device, latent_dim*(stack_size + 1), ode_hidden_dim, ode_out_dim, augment_dim, time_dependent=False,
+            non_linearity=ode_non_linearity, linear_layer=ode_linear_layer).to(device)
+
+    def forward(self, images, times, dt):
+        # images: [(batch), n_stack, in_channels, height, width]
+        # latent_z: [n_stack, latent_dim]
+        # print("input_images: ", images.shape)
+        latent_z = self.encoder(images)
+        # print("latent_z: ", latent_z.shape)
+        
+        # latent_z_stack: [(batch), n_stack, latent_dim*(n_stack+1)]
+        # for the moment n_stack = 1
+        if len(latent_z.shape) == 3:
+            latent_z_stack = torch.cat([latent_z[:, :-1], (latent_z[:, 1:]-latent_z[:, :-1])/dt], dim=-1).squeeze(1)
+        
+
+        elif len(latent_z.shape) == 2:
+            latent_z_stack = torch.cat([latent_z[:-1], (latent_z[1:]-latent_z[:-1])/dt], dim=-1)
+
+        # print("latent_z_stack: ", latent_z_stack.shape)
+
+        # sim : [times, (batch),ode_out_dim]
+        sim = self.node(latent_z_stack, times)
+        # print("sim: ", sim.shape)
+        # sim : [(batch), n_stack, ode_out_dim]
+        if len(images.shape) == 5:
+            sim = sim.swapdims(0,1)
+        else:
+            sim = sim.squeeze(1)
+        # print("sim: ", sim.shape)
+
+        reconstructed_images = self.decoder(sim)
+        # print("reconstructed_images: ", reconstructed_images.shape)
+
+        return reconstructed_images, sim
+
+    def encode(self, images):
+
+        return self.encoder(images)
+
+    def decode(self, latent_z):
+        return self.decoder(latent_z)
+
+class ResNodeWithBatch(nn.Module):
+    def __init__(self, device, size, latent_dim, in_channels, layers,
+    ode_hidden_dim, ode_out_dim, augment_dim=0, time_dependent=False, ode_linear_layer=False,
+    ode_non_linearity='relu', conv_activation=nn.ReLU(),latent_activation=None, stack_size=1):
+        super(ResNodeWithBatch, self).__init__()
+        self.device = device
+        self.size = size
+        self.latent_dim = latent_dim
+        self.in_channels = in_channels
+        self.layers = layers
+        self.conv_activation = conv_activation
+        self.latent_activation = latent_activation
+        self.ode_hidden_dim = ode_hidden_dim
+        self.out_dim = ode_out_dim
+        self.augment_dim = augment_dim
+        self.time_dependent = time_dependent
+        self.ode_linear_layer = ode_linear_layer
+        self.ode_non_linearity = ode_non_linearity
+
+        print("-"*50)
+        print("Creating ConvAE...")
+        self.encoder = TimeDistributed(
+            ResNetCustomEncoder(layers, in_channels, n_latent=latent_dim, expansion=4)
+            .to(device),
+            len_shape_without_batch=4, # input without batch are (times, latent_dim)
+            batch_first=True
+        )
+        self.decoder = TimeDistributed(
+            ResNetCustomDecoder(img_channel=in_channels, n_latent=latent_dim).to(device),
+            len_shape_without_batch=2, # input without batch are (times, latent_dim)
+            batch_first=True
+        )
+
+        print("-"*50)
+        print("Creating ANODENet...")
+        self.node = ANODENet(device, latent_dim*(stack_size + 1), ode_hidden_dim, ode_out_dim, augment_dim, time_dependent=False,
+            non_linearity=ode_non_linearity, linear_layer=ode_linear_layer).to(device)
+
+    def forward(self, images, times, dt):
+        # images: [(batch), n_stack, in_channels, height, width]
+        # latent_z: [n_stack, latent_dim]
+        # print("input_images: ", images.shape)
+        latent_z = self.encoder(images)
+        # print("latent_z: ", latent_z.shape)
+        
+        # latent_z_stack: [(batch), n_stack, latent_dim*(n_stack+1)]
+        # for the moment n_stack = 1
+        if len(latent_z.shape) == 3:
+            latent_z_stack = torch.cat([latent_z[:, :-1], (latent_z[:, 1:]-latent_z[:, :-1])/dt], dim=-1).squeeze(1)
+        
+
+        elif len(latent_z.shape) == 2:
+            latent_z_stack = torch.cat([latent_z[:-1], (latent_z[1:]-latent_z[:-1])/dt], dim=-1)
+
+        # print("latent_z_stack: ", latent_z_stack.shape)
+
+        # sim : [times, (batch),ode_out_dim]
+        sim = self.node(latent_z_stack, times)
+        # print("sim: ", sim.shape)
+        # sim : [(batch), n_stack, ode_out_dim]
+        if len(images.shape) == 5:
+            sim = sim.swapdims(0,1)
+        else:
+            sim = sim.squeeze(1)
+        # print("sim: ", sim.shape)
+
+        reconstructed_images = self.decoder(sim)
+        # print("reconstructed_images: ", reconstructed_images.shape)
+
+        return reconstructed_images, sim
+
+    def encode(self, images):
+
+        return self.encoder(images)
+
+    def decode(self, latent_z):
+        return self.decoder(latent_z)
 
 
 class LatentRegularizerLoss(nn.Module):

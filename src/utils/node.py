@@ -231,7 +231,7 @@ def train_convnode_with_batch(model, optimizers, scheduler, epochs, getter, disp
         # print(out.shape, out.view(-1, batch_init_positions.shape[-1]).shape)
         # print(batch_true_positions.shape, batch_true_positions.view(-1, batch_init_positions.shape[-1]).shape)
         # print(out_images.shape, batch_true_images.shape)
-        loss += loss_fn(latent, out_images[:], batch_true_images[:])
+        loss += loss_fn(latent, out_images[:,:], batch_true_images[:,:])
         # .view(-1,batch_init_positions.shape[-1])
         
         
@@ -252,7 +252,7 @@ def train_convnode_with_batch(model, optimizers, scheduler, epochs, getter, disp
            display_results_fn(i, model, out_display, getter, getter.total_length, getter.dt)
            iterator.set_description_str(f'Display loss: {running_loss/display:.8f}')
            running_loss = 0.
-           loss_fn.forward_print(latent, out_images[:], batch_true_images[:])
+           loss_fn.forward_print(latent, out_images[:,:], batch_true_images[:,:])
         
     return None
 

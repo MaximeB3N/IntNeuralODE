@@ -73,6 +73,10 @@ class ODEFunc(nn.Module):
         out = self.fc2(out)
         out = self.non_linearity(out)
         out = self.fc3(out)
+        # below to be removed to have the previous version of the code
+        # out = self.non_linearity(out)
+        # out = self.fc4(out)
+        # above to be removed to have the previous version of the code
         return out
 
 

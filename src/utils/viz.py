@@ -145,7 +145,7 @@ def display_ode_trajectory(i, model, out_display, getter, final_time, dt):
 def display_convnode_trajectory(i, model, out_display, getter, final_time, dt, root=None, name=None):
     
     device = model.device
-    
+    model.eval()
     print("The graphs at epoch {}".format(i))
     with torch.no_grad():
         index = np.random.randint(0, getter.N_train)
