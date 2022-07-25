@@ -3,12 +3,28 @@ import numpy as np
 
 
 
-
 def gaussian_density(x, mu, sigma):
     return torch.exp(-torch.norm(torch.tensor(x - mu).float(), dim=1)**2/(2*sigma**2))/(2*np.pi*sigma**2)
 
+def create_spatial_encoding(size, depth=0):
+    spatial_encodings = []
+    x_encoding = np.linspace(np.zeros(size), np.ones(size), size, dtype=np.float64, axis=1)
+    y_encoding = np.linspace(np.zeros(size), np.ones(size), size, dtype=np.float64, axis=0)
+    spatial_encodings.extend([x_encoding.copy(), y_encoding.copy()])
 
-def add_spatial_encoding(gaussian_dataset):
+    for i in range(0, depth):
+        freq = pow(2, i)
+        x_encoding_sin = np.sin(x_encoding * np.pi*freq)
+        y_encoding_sin = np.sin(y_encoding * np.pi*freq)
+        x_encoding_cos = np.cos(x_encoding * np.pi*freq)
+        y_encoding_cos = np.cos(y_encoding * np.pi*freq)
+
+        spatial_encodings.extend([x_encoding_sin.copy(), y_encoding_sin.copy(), x_encoding_cos.copy(), y_encoding_cos.copy()])
+        
+
+    return spatial_encodings
+
+def add_spatial_encoding(gaussian_dataset, depth=0):
     n_images = len(gaussian_dataset)
 
     
@@ -24,13 +40,12 @@ def add_spatial_encoding(gaussian_dataset):
 
     # create the spatial encoding
     # create the x encoding
-    x_encoding = np.linspace(np.zeros(size), np.ones(size), size, dtype=np.float64, axis=1)
-    y_encoding = np.linspace(np.zeros(size), np.ones(size), size, dtype=np.float64, axis=0)
+    spatial_encodings = create_spatial_encoding(size, depth=depth)
 
     samples = []
 
     for i in range(n_images):
-        new_image = np.stack([gaussian_dataset[i][0].squeeze(), x_encoding, y_encoding], axis=0)
+        new_image = np.stack([gaussian_dataset[i][0].squeeze(), *spatial_encodings], axis=0)
         if len(gaussian_dataset[0]) == 2:
             samples.append([new_image, gaussian_dataset[i][1]])
 

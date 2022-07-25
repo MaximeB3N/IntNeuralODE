@@ -1,7 +1,7 @@
 # To be ignored sprecifically with this project
 /data/
 /models
-/runs/
+/run/
 /images/AE_ODE/Gravity/MultiTrajectories/Together/
 # Byte-compiled / optimized / DLL files
 __pycache__/

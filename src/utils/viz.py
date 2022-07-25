@@ -1,5 +1,8 @@
+import os
 from pathlib import Path
 import matplotlib.pyplot as plt
+import matplotlib.transforms as mtrans
+
 import numpy as np
 from plotly.subplots import make_subplots
 import plotly.graph_objs as go
@@ -298,3 +301,92 @@ def display_auto_encoder_reconstruction(model, dataset, N_samples_recon):
                 plt.axis('off')
             plt.show()
             break
+
+
+def plot_extrapolation(root_plot, ground_truth_sequence, prediction_sequence, input_size=10, num_traj_plot=1, image_name=None):
+    # assert ground_truth_sequence.shape == prediction_sequence.shape
+    assert (ground_truth_sequence.shape[0] == num_traj_plot and ground_truth_sequence.ndim == 5) or ground_truth_sequence.ndim == 4
+
+    fcount = len(os.listdir(root_plot)) + 1
+
+    if image_name is None:
+        image_name = f"extrapolation_"
+
+
+    num_plot = ground_truth_sequence.shape[0]
+    gt_len_seq = ground_truth_sequence.shape[1]
+    pred_len_seq = prediction_sequence.shape[1]
+    max_len_seq = max(gt_len_seq, pred_len_seq)
+    # min_len_seq = min(gt_len_seq, pred_len_seq)
+
+    for traj_ind in range(num_plot):
+        # Plot it with Matplotlib to compare ground truth and predictions
+        fig_whole_seq, axes_whole_seq = plt.subplots(nrows=2, ncols=max_len_seq, figsize=(2*max_len_seq + 1.,4 + 2), squeeze=False)
+        
+        for i, ax in enumerate(axes_whole_seq.flat):
+
+            if i < pred_len_seq:
+                # The prediction part
+                # ax = plt.subplot(2, len_seq, i+1+len_seq)
+                ax.imshow(prediction_sequence[traj_ind, i % pred_len_seq].squeeze(), cmap='gray')
+                # ax.axis('off')
+                ax.set_title(f"frame={i+1}", fontsize="medium")
+                ax.set_yticks([])
+                ax.set_xticks([])
+                
+                if i == pred_len_seq:
+                    ax.set_ylabel("Prediction")
+
+
+
+            elif i - max_len_seq < gt_len_seq:
+                # The ground truth part
+                # ax = plt.subplot(2, len_seq, i+1)
+                ax.imshow(ground_truth_sequence[traj_ind, (i - max_len_seq) % gt_len_seq].squeeze(), cmap='gray')
+                
+                # ax.axis('off')
+                ax.set_yticks([])
+                ax.set_xticks([])
+
+                if i == 0:
+                    ax.set_ylabel("Ground Truth")
+
+            else:
+                ax.axis('off')
+                
+            
+            
+        fig_whole_seq.tight_layout()
+
+        r = fig_whole_seq.canvas.get_renderer()
+        get_bbox = lambda axe: axe.get_tightbbox(r).transformed(fig_whole_seq.transFigure.inverted())
+        bboxes = np.array(list(map(get_bbox, axes_whole_seq.flat)), mtrans.Bbox).reshape(axes_whole_seq.shape)
+
+        xmax = np.array(list(map(lambda b: b.x1, bboxes.flat))).reshape(axes_whole_seq.shape)[:, input_size]
+        xmin = np.array(list(map(lambda b: b.x0, bboxes.flat))).reshape(axes_whole_seq.shape)[:, input_size - 1]
+        xs = np.c_[xmax[0], xmin[0]].mean(axis=1)[0]
+
+        ymax = np.array(list(map(lambda b: b.y1, bboxes.flat)))
+        ymin = np.array(list(map(lambda b: b.y0, bboxes.flat)))
+        ymax = ymax.max()
+        ymin = ymin.min()
+        # Draw a horizontal lines at those coordinates
+        line = plt.Line2D([xs,xs],[ymin/2.,(1 + ymax)/2.], transform=fig_whole_seq.transFigure, color=(204./255, 0, 0), linestyle="--", linewidth=3.)
+        # add text to the line
+        text_input = plt.text(xs/2., 0.92, f"Input", transform=fig_whole_seq.transFigure, color=(204./255, 0, 0), fontsize=15, horizontalalignment='left')
+        text_pred = plt.text((1+ xs)/2., 0.92, f"Prediction", transform=fig_whole_seq.transFigure, color=(204./255, 0, 0), fontsize=15, horizontalalignment='right')
+
+        # fig_whole_seq.suptitle(f"Trajectory {traj_ind+1}")
+        # print(text_input.get_bbox_patch().get_extents())
+
+        fig_whole_seq.add_artist(line)
+        fig_whole_seq.add_artist(text_input)
+        fig_whole_seq.add_artist(text_pred)
+
+        image_complete_name = image_name + f'comparison_id_{fcount}.png'
+
+        # Save the figure
+        fig_whole_seq.savefig(os.path.join(root_plot, image_complete_name))
+        print("Created the image: ", image_complete_name)
+        fcount += 1
+        plt.close(fig_whole_seq)
