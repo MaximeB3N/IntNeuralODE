@@ -4,16 +4,16 @@ input_length: 2
 target_length: 38
 
 # Model
-dim_dynamic: 128
-dim_appearance: 128
+dim_dynamic: 64
+dim_appearance: 64
 layers_encoder: [3, 5, 3]
-ode_out_dim: 128
-ode_hidden_dim: 256
+ode_out_dim: 64
+ode_hidden_dim: 128
 augment_dim: 0
 out_channels: 3
 
 # Training parameters
-batch_size: 64
+batch_size: 32
 decay_rate: 0.75
 step_decay: 200
 reg_lambda: 0.00001

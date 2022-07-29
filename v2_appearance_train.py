@@ -54,7 +54,7 @@ def evaluate(device, model, test_loader, loss_fn, psnr, ssim, tqdm_iterator):
 
     return running_loss/running_num_samples, psnr_value, ssim_value
 
-def train(device, model, optimizer, train_loader, loss_fn, tqdm_iterator):
+def train(device, model, optimizers, train_loader, loss_fn, tqdm_iterator):
     running_loss = 0.
     running_num_samples = 0
 
@@ -77,9 +77,13 @@ def train(device, model, optimizer, train_loader, loss_fn, tqdm_iterator):
         loss = loss_fn(pred_latent, pred_images, batch_output_images)
 
         # .view(-1,batch_init_positions.shape[-1])
-        optimizer.zero_grad()
+        for optimizer in optimizers:
+            optimizer.zero_grad()
+
         loss.backward()
-        optimizer.step()
+        
+        for optimizer in optimizers:
+            optimizer.step()
         # update the progress bar
         tqdm_iterator.set_description_str(f'Train {running_num_samples}/{len(train_loader)} Loss: {loss.item():.8f}')
         running_loss += loss.item()
@@ -89,7 +93,7 @@ def train(device, model, optimizer, train_loader, loss_fn, tqdm_iterator):
 
 
 
-def main(device, model, optimizer, scheduler, epochs, train_loader, test_loader, 
+def main(device, model, optimizers, schedulers, epochs, train_loader, test_loader, 
     input_length, loss_fn, root_save_images, out_display=-1, checkpoint_image_interval=1, checkpoint_model_interval=10):
     
     device = model.device
@@ -110,7 +114,7 @@ def main(device, model, optimizer, scheduler, epochs, train_loader, test_loader,
         model.train()
         
         
-        train_loss = train(device, model, optimizer, train_loader, loss_fn, iterator)
+        train_loss = train(device, model, optimizers, train_loader, loss_fn, iterator)
 
         # display_results_fn(i, model, out_display, getter, getter.total_length, getter.dt)
         iterator_dict['train_loss'] = f"{train_loss:.8f}"
@@ -143,7 +147,9 @@ def main(device, model, optimizer, scheduler, epochs, train_loader, test_loader,
         
 
         # Update scheduler
-        scheduler.step()
+        for scheduler in schedulers:
+            scheduler.step()   
+
         loss_fn.step()
 
     return None
@@ -213,7 +219,7 @@ def display_one_trajectory(i, model, train_loader, test_loader, root_save_images
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, default="config/convnode_appearance64.yaml")
+    parser.add_argument("--config", type=str, default="config/convnode_appearance64_diff_opt.yaml")
 
 
     args = parser.parse_args()
@@ -275,7 +281,8 @@ if __name__ == "__main__":
     # Create loss
     
     print("-"*50 + "\n", "Creating loss...")
-    lr = config["lr"]
+    lr_ae = config["lr_ae"]
+    lr_ode = config["lr_ode"]
     reg_lambda = config["reg_lambda"]
     step_decay = config["step_decay"]
     decay_rate = config["decay_rate"]
@@ -285,9 +292,13 @@ if __name__ == "__main__":
 
     # Create optimizer and scheduler
     print("-"*50 + "\n", "Creating optimizer...")
-    
-    optimizer = torch.optim.Adam(convnode.parameters(), lr=config["lr"])
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_decay, decay_rate)
+    optimizer_ae = torch.optim.Adam(list(encoder.parameters()) + list(decoder.parameters()), lr=lr_ae)
+    optimizer_ode = torch.optim.Adam(convnode.node.parameters(), lr=lr_ode)
+    optimizers = [optimizer_ae, optimizer_ode]
+
+    scheduler_ae = torch.optim.lr_scheduler.StepLR(optimizer_ae, step_decay, decay_rate)
+    scheduler_ode = torch.optim.lr_scheduler.StepLR(optimizer_ode, step_decay, decay_rate)
+    schedulers = [scheduler_ae, scheduler_ode]
     print("Done.")
 
     # Train
@@ -305,12 +316,12 @@ if __name__ == "__main__":
     if not os.path.exists(root_images):
         os.makedirs(root_images)
     
-    # convnode.load_state_dict(torch.load("run/Classic_10_10_1_image_focus_slow/models/convnode_appearance64__epoch_200.pt"))
+    # convnode.load_state_dict(torch.load("run/Classic_10_10/models/convnode_appearance64_2000_epochs_final.pt"))
 
     assert train_dataset.dt == test_dataset.dt, "The dt must be the same for both dataset."
     
     print("-"*50 + "\n", "Training...")
-    main(device, convnode, optimizer, scheduler, epochs, train_loader, test_loader, 
+    main(device, convnode, optimizers, schedulers, epochs, train_loader, test_loader, 
     input_length, loss_fn, root_images, out_display=-1, checkpoint_image_interval=checkpoint_image_interval,
     checkpoint_model_interval=checkpoint_model_interval)
     print("Done.")

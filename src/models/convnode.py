@@ -134,7 +134,7 @@ class ConvNodeAppearance(nn.Module):
         self.ode_non_linearity = ode_non_linearity
         
         print("-"*50)
-        print("Creating ResNetAE...")
+        print("Creating Auto-encoder...")
         self.encoder = encoder.to(device)
             
         self.decoder = TimeDistributed(

@@ -269,7 +269,7 @@ class NewMovingMNIST(data.Dataset):
         input = torch.cat([input.squeeze(), *self.spatial_encodings], dim=0).float()
         # print("input data 1 shape: ", input_data.shape)
         # Add the spatial encoding to the target
-        output = torch.from_numpy(add_spatial_encoding(output.cpu().numpy(), depth=0)).float()
+        # output = torch.from_numpy(add_spatial_encoding(output.cpu().numpy(), depth=0)).float()
         # print()
         # print(input.size())
         # print(output.size())
