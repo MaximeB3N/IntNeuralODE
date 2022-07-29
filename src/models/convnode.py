@@ -1,93 +1,68 @@
-import numpy as np
 import torch
 import torch.nn as nn
-import torchvision
-import matplotlib.pyplot as plt
-from tqdm.notebook import trange
 
-from .ae import ConvAE, Decoder, Encoder
 from .anode import ANODENet
 
 
-class ConvNode(nn.Module):
-    def __init__(self, device, size, latent_dim, in_channels,
-    ode_hidden_dim, ode_out_dim, augment_dim=0, time_dependent=False, 
-    ode_non_linearity='relu', conv_activation=nn.ReLU(),latent_activation=None, stack_size=1):
-        super(ConvNode, self).__init__()
+class TimeDistributed(nn.Module):
+    def __init__(self, module, len_shape_without_batch, batch_first=False):
+        super(TimeDistributed, self).__init__()
+        self.module = module
+        self._len_shape_without_batch = len_shape_without_batch
+        self.batch_first = batch_first
+
+    def forward(self, x):
+        # x: [batch, time, *]
+        assert len(x.shape) == self._len_shape_without_batch or self._len_shape_without_batch + 1, f"Input must have shape {self._len_shape_without_batch}D or {self._len_shape_without_batch + 1}D, received {len(x.shape)}D"
+
+        if len(x.size()) == self._len_shape_without_batch:
+            return self.module(x)
+
+        batch_flatten_shapes = list(x.shape[1:])
+        batch_flatten_shapes[0] = -1
+        # Squash samples and timesteps into a single axis
+        x_reshape = x.contiguous().reshape(batch_flatten_shapes)  # (samples * timesteps, input_size)
+        # print("TimeDistributed: x_reshape: ", x_reshape.shape)
+        y = self.module(x_reshape)
+        # print("TimeDistributed: y: ", y.shape)
+
+        # We have to reshape Y
+        
+        if self.batch_first:
+            final_shapes = [x.shape[0], -1] + list(y.shape[1:])
+            y = y.contiguous().view(final_shapes)  # (samples, timesteps, output_size)
+        else:
+            final_shapes = [-1, x.shape[1]] + list(y.shape[1:])
+            y = y.view(-1, x.size(1), y.size(-1))  # (timesteps, samples, output_size)
+        # print("TimeDistributed: y return: ", y.shape)
+
+
+        # print('TimeDistributed: y return: ', y.shape)    
+        return y
+
+class ConvNodeApproxVelocity(nn.Module):
+    def __init__(self, device, encoder, decoder, size, latent_dim,
+    ode_hidden_dim, ode_out_dim, augment_dim=0, ode_linear_layer=False,
+    ode_non_linearity='relu', stack_size=1):
+        super(ConvNodeApproxVelocity, self).__init__()
         self.device = device
         self.size = size
         self.latent_dim = latent_dim
-        self.in_channels = in_channels
-        self.conv_activation = conv_activation
-        self.latent_activation = latent_activation
         self.ode_hidden_dim = ode_hidden_dim
         self.out_dim = ode_out_dim
         self.augment_dim = augment_dim
-        self.time_dependent = time_dependent
-        self.ode_non_linearity = ode_non_linearity
-
-        print("-"*50)
-        print("Creating ConvAE...")
-        self.ae = ConvAE(height=size, width=size, latent_dim=latent_dim, in_channels=in_channels, 
-            activation=conv_activation, relu=latent_activation).to(device)
-
-        print("-"*50)
-        print("Creating ANODENet...")
-        self.node = ANODENet(device, latent_dim*(stack_size + 1), ode_hidden_dim, ode_out_dim, augment_dim, time_dependent=False,
-            non_linearity=ode_non_linearity).to(device)
-
-    def forward(self, images, times, dt):
-        # images: [n_stack, in_channels, height, width]
-        # latent_z: [n_stack, latent_dim]
-        latent_z = self.ae.encode(images)
-        # latent_z_stack: [1, latent_dim*(n_stack+1)]
-        # for the moment n_stack = 1
-        latent_z_stack = torch.cat([latent_z[:-1], (latent_z[1:]-latent_z[:-1])/dt], dim=-1)
-
-        # sim : [times, 1, n_stack*ode_out_dim]
-        sim = self.node(latent_z_stack, times)[:,0, :latent_z.shape[-1]]
-
-        reconstructed_images = self.ae.decode(sim)
-
-        return reconstructed_images, sim
-
-    def encode(self, images):
-
-        return self.ae.encode(images)
-
-    def decode(self, latent_z):
-        return self.ae.decode(latent_z)
-
-
-class ConvNodeWithBatch(nn.Module):
-    def __init__(self, device, size, latent_dim, in_channels,
-    ode_hidden_dim, ode_out_dim, augment_dim=0, time_dependent=False, ode_linear_layer=False,
-    ode_non_linearity='relu', conv_activation=nn.ReLU(),latent_activation=None, stack_size=1):
-        super(ConvNodeWithBatch, self).__init__()
-        self.device = device
-        self.size = size
-        self.latent_dim = latent_dim
-        self.in_channels = in_channels
-        self.conv_activation = conv_activation
-        self.latent_activation = latent_activation
-        self.ode_hidden_dim = ode_hidden_dim
-        self.out_dim = ode_out_dim
-        self.augment_dim = augment_dim
-        self.time_dependent = time_dependent
         self.ode_linear_layer = ode_linear_layer
         self.ode_non_linearity = ode_non_linearity
 
         print("-"*50)
         print("Creating ConvAE...")
         self.encoder = TimeDistributed(
-            Encoder(device=device, latent_dim=latent_dim, in_channels=in_channels,
-            activation=conv_activation, relu=latent_activation).to(device), 
-            len_shape_without_batch=4, # input without batch are (times, channels, height, width)
+            encoder.to(device),
+            len_shape_without_batch=4, # input without batch are (times, latent_dim)
             batch_first=True
-        )
+        ).to(device)
         self.decoder = TimeDistributed(
-            Decoder(device=device, latent_dim=latent_dim, in_channels=in_channels,
-            activation=conv_activation).to(device),
+            decoder,
             len_shape_without_batch=2, # input without batch are (times, latent_dim)
             batch_first=True
         )
@@ -138,81 +113,113 @@ class ConvNodeWithBatch(nn.Module):
         return self.decoder(latent_z)
 
 
-
-
-class TimeDistributed(nn.Module):
-    def __init__(self, module, len_shape_without_batch, batch_first=False):
-        super(TimeDistributed, self).__init__()
-        self.module = module
-        self._len_shape_without_batch = len_shape_without_batch
-        self.batch_first = batch_first
-
-    def forward(self, x):
-        # x: [batch, time, *]
-        assert len(x.shape) == self._len_shape_without_batch or self._len_shape_without_batch + 1, f"Input must have shape {self._len_shape_without_batch}D or {self._len_shape_without_batch + 1}D, received {len(x.shape)}D"
-
-        if len(x.size()) == self._len_shape_without_batch:
-            return self.module(x)
-
-        batch_flatten_shapes = list(x.shape[1:])
-        batch_flatten_shapes[0] = -1
-        # Squash samples and timesteps into a single axis
-        x_reshape = x.contiguous().reshape(batch_flatten_shapes)  # (samples * timesteps, input_size)
-        # print("TimeDistributed: x_reshape: ", x_reshape.shape)
-        y = self.module(x_reshape)
-        # print("TimeDistributed: y: ", y.shape)
-
-        # We have to reshape Y
-        
-        if self.batch_first:
-            final_shapes = [x.shape[0], -1] + list(y.shape[1:])
-            y = y.contiguous().view(final_shapes)  # (samples, timesteps, output_size)
-        else:
-            final_shapes = [-1, x.shape[1]] + list(y.shape[1:])
-            y = y.view(-1, x.size(1), y.size(-1))  # (timesteps, samples, output_size)
-        # print("TimeDistributed: y return: ", y.shape)
-
-
-        # print('TimeDistributed: y return: ', y.shape)    
-        return y
-
-
-class LatentRegularizerLoss(nn.Module):
-    def __init__(self, device, reg_lambda, step_decay=1, decay_rate=0.9):
-        super(LatentRegularizerLoss, self).__init__()
-        self.device = device
-        self.reg_lambda = reg_lambda
-        self.image_loss = nn.MSELoss()
-        self.step_decay = step_decay
-        self.decay_rate = decay_rate
-        self._step = 0
-
-    def forward(self, latent_z, pred_images, true_images):
-        # latent_z: [batch, latent_dim]
-        # pred_images: [batch, n_stack, in_channels, height, width]
-        # true_images: [batch, n_stack, in_channels, height, width]
-        loss_img = self.image_loss(pred_images, true_images)
-        loss_reg = torch.linalg.norm(latent_z, ord=2, dim=-1).mean(dim=-1).mean(dim=-1)
-        # print("loss_img: ", loss_img)
-        # print("loss_reg: ", loss_reg)
-        return loss_img + self.reg_lambda * loss_reg
+class ConvNodeAppearance(nn.Module):
+    def __init__(self, device, encoder, decoder, layers, dynamics_dim, appearance_dim, in_channels, out_channels,
+    ode_hidden_dim, ode_out_dim, augment_dim=0, time_dependent=False, ode_linear_layer=False,
+    ode_non_linearity='relu', conv_activation=nn.ReLU(),latent_activation=None):
     
-
-    def step(self):
-        self._step +=1
-        if self._step % self.step_decay == 0:
-            self.reg_lambda *= self.decay_rate
+        super(ConvNodeAppearance, self).__init__()
+        self.device = device
+        self.layers = layers
+        self.dynamics_dim = dynamics_dim
+        self.appearance_dim = appearance_dim
+        self.in_channels = in_channels
+        self.conv_activation = conv_activation
+        self.latent_activation = latent_activation
+        self.ode_hidden_dim = ode_hidden_dim
+        self.out_dim = ode_out_dim
+        self.augment_dim = augment_dim
+        self.time_dependent = time_dependent
+        self.ode_linear_layer = ode_linear_layer
+        self.ode_non_linearity = ode_non_linearity
+        
+        print("-"*50)
+        print("Creating Auto-encoder...")
+        self.encoder = encoder.to(device)
             
+        self.decoder = TimeDistributed(
+            decoder,
+            len_shape_without_batch=2, # input without batch are (times, latent_dim)
+            batch_first=True
+        ).to(device)
 
-    def forward_print(self, latent_z, pred_images, true_images):
-        # latent_z: [batch, latent_dim]
-        # pred_images: [batch, n_stack, in_channels, height, width]
-        # true_images: [batch, n_stack, in_channels, height, width]
-        loss_img = self.image_loss(pred_images, true_images)
-        loss_reg = torch.linalg.norm(latent_z, ord=2, dim=-1).mean(dim=-1).mean(dim=-1)
-        print("-"*30, "Loss prints", "-"*30)
-        print("loss_img: ", loss_img)
-        print("loss_reg: ", self.reg_lambda * loss_reg)
-        print("reg_lambda: ",self.reg_lambda)
-        print("-"*73)
-        return None
+        print("-"*50)
+        print("Creating ANODENet...")
+        self.node = ANODENet(device, 2*dynamics_dim, ode_hidden_dim, ode_out_dim, augment_dim, time_dependent=False,
+            non_linearity=ode_non_linearity, linear_layer=ode_linear_layer).to(device)
+
+    def forward(self, image_inputs, times):
+        # images: [(batch), n_stack, in_channels, height, width]
+        # latent_z: [n_stack, latent_dim]
+        # print("input_images: ", images.shape)
+        latent_z = self.encoder(image_inputs)
+        # latent_dyn: [batch, n_stack, dynamics_dim]
+        # print("latent_z shape", latent_z.shape)
+        latent_dynamics = latent_z[..., :2*self.dynamics_dim]
+        # print("latent_dynamics shape", latent_dynamics.shape)
+        # latent_app: [batch, n_stack, appearance_dim]
+        latent_appearance = latent_z[..., 2*self.dynamics_dim:].unsqueeze(1)
+   
+        sim = self.node(latent_dynamics, times)
+        # print("sim shape", sim.shape)
+        # print("sim: ", sim.shape)
+        # sim : [(batch), n_stack, ode_out_dim]
+        if len(image_inputs.shape) == 4:
+            sim = sim.swapdims(0,1)
+        else:
+            sim = sim.squeeze(1)
+        # print("sim: ", sim.shape)
+
+        # add the latent_appearance to the sim to reconstruct
+        # print("sim shape", sim.shape)
+        # print("before", latent_appearance.shape)
+        latent_appearance = latent_appearance.repeat(1, sim.shape[1], 1)
+        # print("appearance shape", latent_appearance.shape)
+        # print("after shape", latent_appearance.shape)
+        # print("dynamics", sim.shape)
+
+        latent_out = torch.cat([sim, latent_appearance], dim=-1)
+
+        # print("latent_out: ", latent_out.shape)
+        # print(latent_out)
+        reconstructed_images = self.decoder(latent_out)
+        # print("reconstructed_images: ", reconstructed_images.shape)
+
+        return reconstructed_images, sim
+
+    def forward_diff_appearance(self, images_dyn, images_app, times, dt):
+        # Dynamics
+        latent_z_dyn = self.encoder(images_dyn)
+        latent_dynamics = latent_z_dyn[..., :2*self.dynamics_dim]
+        
+        # Appearance
+        latent_z_app = self.encoder(images_app)
+        latent_appearance = latent_z_app[..., 2*self.dynamics_dim:].unsqueeze(1)
+
+        # sim : [times, (batch),ode_out_dim]
+        sim = self.node(latent_dynamics, times)
+        # print("sim: ", sim.shape)
+        # sim : [(batch), n_stack, ode_out_dim]
+        if len(images_dyn.shape) == 4:
+            sim = sim.swapdims(0,1)
+        else:
+            sim = sim.squeeze(1)
+        # print("sim: ", sim.shape)
+
+        # add the latent_appearance to the sim to reconstruct
+        # print("sim shape", sim.shape)
+        latent_appearance = latent_appearance.repeat(1, sim.shape[1], 1)
+
+        latent_out = torch.cat([sim, latent_appearance], dim=-1)
+
+        reconstructed_images = self.decoder(latent_out)
+        # print("reconstructed_images: ", reconstructed_images.shape)
+
+        return reconstructed_images, sim
+
+    def encode(self, images):
+
+        return self.encoder(images)
+
+    def decode(self, latent_z):
+        return self.decoder(latent_z)

@@ -59,7 +59,7 @@ def generate_gravity_hole_ball_positions_and_velocity(box, N, N_frames, dt, info
 
     return np.array(dataset)
 
-def generate_gravity_hole_ball_images(box, N, N_frames, dt, infos):
+def generate_gravity_hole_ball_images(box, N, N_frames, dt, infos, background_image=None):
     """
     Generate images of a gravity hole ball.
     
@@ -89,12 +89,22 @@ def generate_gravity_hole_ball_images(box, N, N_frames, dt, infos):
 
         x, y = box.move(0.)
         ball_img = gaussian_density(INDICES_MATRIX, np.array([x, y]), infos["RADIUS"]).reshape(infos["WIDTH"], infos["HEIGHT"]).numpy()
+
+        if background_image is not None:
+                ball_img = (ball_img - ball_img.min())/(ball_img.max() - ball_img.min())
+                ball_img = np.where(ball_img > 0.15, ball_img, 0.5*background_image)
+                # ball_img = 0.5*background_image + 0.5*ball_img
+                
         ball_img = (ball_img - ball_img.min())/(ball_img.max() - ball_img.min())
         trajectory.append(ball_img)
         for _ in range(N_frames - 1):
             x, y = box.move(dt)
             ball_img = gaussian_density(INDICES_MATRIX, np.array([x, y]), infos["RADIUS"]).reshape(infos["WIDTH"], infos["HEIGHT"]).numpy()
             # normalize it
+            if background_image is not None:
+                ball_img = (ball_img - ball_img.min())/(ball_img.max() - ball_img.min())
+                ball_img = np.where(ball_img > 0.15, ball_img, 0.5*background_image)
+                # ball_img = 0.5*background_image + 0.5*ball_img
             ball_img = (ball_img - ball_img.min())/(ball_img.max() - ball_img.min())
             trajectory.append(ball_img.copy())
 

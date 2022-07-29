@@ -208,7 +208,8 @@ class VAE(nn.Module):
                 plt.axis('off')
             plt.show()
             break
-                
+
+
 
 class VAEwithResNet(nn.Module):
     def __init__(self, n_latent, dec_in_channels):
