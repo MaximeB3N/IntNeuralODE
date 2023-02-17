@@ -146,7 +146,7 @@ class NewMovingMNIST(data.Dataset):
             if num_objects[0] != 2:
                 self.mnist = load_mnist(root)
             else:
-                root_mov_mnist = "/users/eleves-b/2019/maxime.bonnin/perso/IntNeuralODE/data/"
+                root_mov_mnist = "data/MOVING_MNIST/"
                 self.dataset = load_fixed_set(root_mov_mnist, False)
                 
         self.length = int(1e4) if self.dataset is None else self.dataset.shape[1]

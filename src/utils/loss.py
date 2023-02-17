@@ -1,5 +1,7 @@
+from typing import Iterable, Iterator
 import torch
 import torch.nn as nn
+from torchvision.models import vgg16
 
 
 class LatentRegularizerLoss(nn.Module):
@@ -123,10 +125,15 @@ class ImageFocusLatentRegularizerLoss(nn.Module):
         return None
 
 
-class LossNetwork(torch.nn.Module):
-    def __init__(self, vgg_model, loss=nn.L1Loss()):
-        super(LossNetwork, self).__init__()
-        self.vgg_layers = vgg_model.features
+class LossPerceptual(torch.nn.Module):
+    def __init__(self, device=None, vgg_model=None, loss=nn.L1Loss()):
+        super(LossPerceptual, self).__init__()
+        if device is None:
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        if vgg_model is None:
+            self.vgg_model = vgg16(pretrained=True).eval().to(device)
+        self.vgg_layers = self.vgg_model.features
         self.layer_name_mapping = {
             '3': "relu1_2",
             '8': "relu2_2",
@@ -138,10 +145,26 @@ class LossNetwork(torch.nn.Module):
         self.mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
         self.std = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
     
-    def forward(self, pred, gt, normalized=False):
+    def forward(self, latent_z, pred, gt, normalized=False):
+        b, n, c, h, w = pred.shape
         if not normalized:
             gt = (gt - self.mean) / self.std
             pred = (pred - self.mean) / self.std
+
+            # print("gt: ", gt.shape)
+            # print("pred: ", pred.shape)
+            # make them 3 channels
+            gt = gt[:,:,0].unsqueeze(2)
+            gt = gt.reshape(-1, c, h, w)
+            pred = pred[:,:,0].unsqueeze(2)
+            pred = pred.reshape(-1, c, h, w)
+            # print("gt: ", gt.shape)
+            # print("pred: ", pred.shape)
+
+            gt = gt.repeat(1, 3, 1, 1)
+            pred = pred.repeat(1, 3, 1, 1)
+            # print("gt: ", gt.shape)
+            # print("pred: ", pred.shape)
 
         loss = 0
         for name, module in self.vgg_layers._modules.items():
@@ -149,4 +172,25 @@ class LossNetwork(torch.nn.Module):
             gt = module(gt)
             if name in self.layer_name_mapping:
                 loss += self.loss(pred, gt)
+
         return loss
+
+
+class LossWrapper(nn.Module):
+    def __init__(self, losses, weights):
+        super(LossWrapper, self).__init__()
+
+        assert isinstance(losses, Iterable)
+        assert len(losses) == len(weights)
+        
+        self.losses = losses
+        self.weigths = weights
+
+    def forward(self, latent_z, preds, trues):
+        loss = []
+        for i, loss_func in enumerate(self.losses):
+            loss.append(self.weigths[i] * loss_func(latent_z, preds, trues))
+            
+        print(loss)
+        return sum(loss)
+        # return loss

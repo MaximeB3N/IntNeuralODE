@@ -130,7 +130,7 @@ class Decoder(nn.Module):
                     self.activation,
                     nn.BatchNorm2d(32),
                     nn.ConvTranspose2d(32, self.out_channels, kernel_size=4, stride=1, padding=0),
-                    self.activation,
+                #     self.activation,
                 #     nn.BatchNorm2d(32),
 
                 #     nn.Conv2d(in_channels=32, out_channels=self.in_channels, kernel_size=1, stride=1, padding=1),

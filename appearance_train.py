@@ -228,7 +228,7 @@ if __name__ == "__main__":
     batch_size = config["batch_size"]
 
     print("-"*50 + "\n", "Loading dataset...")
-    root = "/users/eleves-b/2019/maxime.bonnin/perso/PhyDNet/data/"
+    root = "../PhyDNet/data/"
     
     train_dataset = NewMovingMNIST(root, is_train=True, n_frames_input=input_length, n_frames_output=target_length, spatial_depth=spatial_depth)
     test_dataset = NewMovingMNIST(root, is_train=False, n_frames_input=input_length, n_frames_output=target_length, spatial_depth=spatial_depth)
