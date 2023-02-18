@@ -1,20 +1,19 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from tqdm.notebook import trange
 
 from src.data.box import GravityHoleBall
-from src.data.generate import generate_gravity_hole_ball_images, add_average_velocity
+from src.data.generate import generate_gravity_hole_ball_images
 
-from src.utils.utils import add_spatial_encoding, gaussian_density
-from src.utils.node import  BatchGetterMultiImages, train_convnode, train_convnode_with_batch
+from src.utils.utils import add_spatial_encoding
+from src.utils.trainer import  train_convnode
+from src.utils.dataset import BatchGetterMultiImages
 from src.utils.viz import display_convnode_trajectory
+from src.utils.loss import LatentRegularizerLoss
 
-from src.models.ae import ConvAE
-from src.models.node import ODEnetSimple
-from src.models.anode import ANODENet
-from src.models.convnode import ConvNode, ConvNodeWithBatch, LatentRegularizerLoss
-
+from src.models.cnnae import Encoder as Encoder_cnnae, Decoder as Decoder_cnnae
+from src.models.resnet import ResNetEncoder28, ResNetDecoder28, ResNetEncoder64, ResNetDecoder64
+from src.models.convnode import ConvNodeApproxVelocity
 
 MARGIN_MIN = 5
 MIN_INIT_VELOCITY = 200.
@@ -62,6 +61,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 size = HEIGHT
 latent_dim = 25
 in_channels = 3
+out_channels = 1
 ode_data_dim = 25
 ode_hidden_dim = 128
 augment_dim = 0
@@ -71,15 +71,11 @@ conv_activation = nn.ReLU()
 latent_activation = None
 stack_size = 1
 
-# conv_ode = ConvNode(device, size, latent_dim, in_channels,
-#     ode_hidden_dim, ode_data_dim, augment_dim=augment_dim, time_dependent=time_dependent,
-#     ode_non_linearity=ode_non_linearity, conv_activation=conv_activation,
-#     latent_activation=latent_activation, stack_size=stack_size)
+encoder = Encoder_cnnae(device, latent_dim, in_channels, activation=conv_activation)
+decoder = Decoder_cnnae(device,latent_dim, out_channels=out_channels, activation=conv_activation)
 
-conv_ode = ConvNodeWithBatch(device, size, latent_dim, in_channels,
-    ode_hidden_dim, ode_data_dim, augment_dim=augment_dim, time_dependent=time_dependent,
-    ode_non_linearity=ode_non_linearity, conv_activation=conv_activation,
-    latent_activation=latent_activation, stack_size=stack_size)
+conv_ode = ConvNodeApproxVelocity(device, encoder, decoder, size, latent_dim,
+    ode_hidden_dim, ode_data_dim, augment_dim=augment_dim)
 
 pathConvODE = "models/AE_ODE/ConvODE/conv_ode_1_ball_latent_{}_hidden_ode_{}_stack_{}_conv_activation_{}_v2.pt".format(latent_dim, ode_hidden_dim, stack_size, conv_activation)
 print(conv_ode.load_state_dict(torch.load(pathConvODE)))
@@ -110,7 +106,7 @@ name = "conv_ode_1_ball_latent_{}_hidden_ode_{}_stack_{}_conv_activation_{}_v3".
 #     display_convnode_trajectory(i, model, out_display, getter, final_time, dt, root=root, name=name)
 
 display_fn = lambda i, model, out_display, getter, final_time, dt: display_convnode_trajectory(i, model, out_display, getter, final_time, dt, root=root, name=name)
-train_convnode_with_batch(conv_ode, optimizer, scheduler, epochs,
+train_convnode(conv_ode, optimizer, scheduler, epochs,
     getter, loss_fn=loss_fn, display=1000, display_results_fn=display_fn)
 
 print("-"*50)

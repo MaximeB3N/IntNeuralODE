@@ -2,22 +2,6 @@ import torch
 import torch.nn as nn
 from torchdiffeq import odeint_adjoint
 
-# class ODEfunc(nn.Module):
-#     def __init__(self, dim, mid_dim):
-#         super(ODEfunc, self).__init__()
-#         self.dim = dim
-#         self.mid_dim = mid_dim
-#         self.seq = nn.Sequential(
-#             nn.Linear(dim, self.mid_dim),
-#             nn.ReLU(),
-#             nn.Linear(self.mid_dim, self.mid_dim),
-#             nn.ReLU(),
-#             nn.Linear(self.mid_dim, dim),
-#             # nn.Tanh()
-#         )
-
-#     def forward(self, t, x):
-#         return self.seq(x)
 
 class ODEfunc(nn.Module):
     def __init__(self, in_dim, mid_dim, out_dim):

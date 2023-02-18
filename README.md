@@ -17,6 +17,13 @@ One can find the thesis report in the folder "report" and the code in the folder
 ```
 .
 ├── README.md
+├── appearance_train.py : script to train a ConvNodeAppearance on the Moving MNIST
+├── adv_appearance_train.py : same but with an adversarial manner
+├── convnode_train.py : script to train a ConvNode on the Moving MNIST
+├── appearance_train_different_lr.py : script to train a ConvNodeAppearance with different lr for AE and NODE
+├── evaluate.py : script to evaluate the model on several test set (long term or real test set)
+
+
 ├── data
 │   ├── MNIST : Used to generate the Moving MNIST training set
 │   ├── MOVING_MNIST : Used to evaluate the model on the Moving MNIST test set
@@ -58,28 +65,26 @@ One can find the thesis report in the folder "report" and the code in the folder
 │   │   ├── generate.py
 
 │   ├── models : all files related to the explored models
-│   │   ├── adversarial.py
-│   │   ├── ae.py
-│   │   ├── anode.py
-│   │   ├── cnnae.py
-│   │   ├── convnode.py
-│   │   ├── node.py
-│   │   ├── resnet.py
-│   │   ├── vae.py
+│   │   ├── adversarial.py : classifiers and discriminators for adversarial loss
+│   │   ├── ae.py : basic convolutions auto-encoders
+│   │   ├── anode.py : Augmented Neural Ordinary Equations implementations
+│   │   ├── cnnae.py : Deeper convolutions auto-encoders
+│   │   ├── convnode.py : To create an auto-encoder along with a Neural ODE w/ or w/out disentangling
+│   │   ├── node.py : Neural ODE implementation 
+│   │   ├── resnet.py : ResNet auto-encoders
+│   │   ├── vae.py : VAE implementations using ResNet or simple conv as backbone
 │   ├── utils
-│   │   ├── dataset.py
-│   │   ├── loss.py
-│   │   ├── metrics.py
-│   │   ├── utils.py
-│   │   ├── viz.py
+│   │   ├── dataset.py : dataset handling for NODE and MovingMNIST dataset generator
+│   │   ├── loss.py : various losses (MSE, Regularization, Perceptual loss, ...)
+│   │   ├── metrics.py : PSNR and SSIM implementations
+│   │   ├── utils.py : ball_shape, spatial encoding, ...
+│   │   ├── viz.py : plot functions
 
 ├── sim : simulation to vizualize how the trajectories are generated (not for training, viz purpose only)
 │   ├── background.png : background image of the simulation (not resized)
 │   ├── frame.png : same but resized
 │   ├── bouncing_main.py : script to make the image "shark.png" to move on the background "frame.png"
 │   ├── gaussian_main.py : script to move a gaussian ball on a black background
-
-
 ```
 
 
