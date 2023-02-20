@@ -7,6 +7,15 @@ from .convnode import TimeDistributed
 
 
 class FrameClassifier(nn.Module):
+    """ 
+    Frame classifier model for the adversarial training.
+
+    Parameters
+    ----------
+    device : torch.device, the device to use
+    in_channels : int, the number of channels in the input (which is the output of the decoder)
+    activation : nn.Module, the activation function to use, default is ReLU
+    """
     def __init__(self, device, in_channels,
                     activation=nn.ReLU()):
         super(FrameClassifier, self).__init__()
@@ -49,6 +58,16 @@ class FrameClassifier(nn.Module):
 
 
 class SequenceClassifier(nn.Module):
+    """
+    Class for the sequence classifier model for the adversarial training.
+    This classifier is complementary to the FrameClassifier as it ensures the temporal coherence of the frames.
+
+    Parameters
+    ----------
+    device : torch.device, the device to use
+    in_channels : int, the number of channels in the input (which is the output of the decoder)
+    activation : nn.Module, the activation function to use, default is ReLU
+    """
     def __init__(self, device, in_channels,
                     activation=nn.ReLU()):
         super(SequenceClassifier, self).__init__()
@@ -86,6 +105,17 @@ class SequenceClassifier(nn.Module):
 
 
 class SequenceClassifier3D(nn.Module):
+    """Class for the sequence classifier model for the adversarial training.
+    This classifier is complementary to the FrameClassifier as it ensures the temporal coherence of the frames.
+    This version uses a 3D CNN instead of a 2D CNN. It is more efficient than the 2D CNN version 
+    as it can captures the temporal coherence of the frames.
+
+    Parameters
+    ----------
+    device : torch.device, the device to use
+    in_channels : int, the number of channels in the input (which is the output of the decoder)
+    activation : nn.Module, the activation function to use, default is ReLU
+    """
     def __init__(self, device, in_channels,
                     activation=nn.ReLU()):
         super(SequenceClassifier3D, self).__init__()
@@ -123,6 +153,14 @@ class SequenceClassifier3D(nn.Module):
 
 
 class Discriminators(nn.Module):
+    """
+    Class for the discriminators model for the adversarial training using both the frame and sequence classifiers.
+
+    Parameters
+    ----------
+    seq_discriminator : SequenceClassifier, the sequence classifier
+    frame_discriminator : FrameClassifier, the frame classifier
+    """
     def __init__(self, seq_discriminator, frame_discriminator) -> None:
         super(Discriminators, self).__init__()
         self.seq_discriminator = seq_discriminator

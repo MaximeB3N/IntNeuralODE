@@ -9,6 +9,15 @@ from src.utils.utils import gaussian_density
 
 
 class Ball:
+    """
+    Class for a ball in 2D space that follows a given move function
+
+    Parameters
+    ----------
+    x0 : np.array of shape (2,), initial position of the ball
+    r : int, radius of the ball
+    move_func : function, function that takes as input the time and the position of the ball and returns the velocity of the ball
+    """
     def __init__(self, x0, r, move_func):
         self.x0 = x0
         self.r = int(np.array(r))
@@ -30,10 +39,24 @@ class Ball:
 
 
 class Image(Ball):
-    def __init__(self, x0, r, move_func, size, border=2, gaussian=True):
+    """
+    Class wrapper of the Ball class that returns an image of the ball instead of the position
+
+    Parameters
+    ----------
+    x0 : np.array of shape (2,), initial position of the ball
+    r : int, radius of the ball
+    move_func : function, function that takes as input the time and the position of the ball and returns the velocity of the ball
+    size : int, size of the image
+    border : tuple of two floats or int, border of the image
+    gaussian : bool, if True the image is a gaussian density, if False the image is a circle
+    """
+    def __init__(self, x0, r, move_func, size, border=[2,2], gaussian=True):
         super(Image, self).__init__(x0, r, move_func)
         self.size = size
         self.border = border
+        if isinstance(self.border, int): 
+            self.border = (self.border, self.border)
         self.image_dim = (size, size, 3)
         self.image = np.zeros(self.image_dim, dtype=np.uint8)
         self.r = r
@@ -178,6 +201,16 @@ class Image(Ball):
             return np.array(samples)
 
 def move_fun_circle(t, x, w=1, exp_decay=1.):
+    """
+    Move function for a circle with angular velocity w and exponential decay exp_decay
+
+    Parameters
+    ----------
+    t : np.array, time
+    x : not used
+    w : float, angular velocity
+    exp_decay : float, exponential decay
+    """
     return np.exp(-exp_decay*t)*np.array([-w*np.sin(w*t), w*np.cos(w*t)], dtype=np.float32)    
 
 

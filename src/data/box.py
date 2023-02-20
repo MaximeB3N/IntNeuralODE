@@ -1,6 +1,17 @@
 import numpy as np
 
 class Object:
+    """
+    A simple object with a position and a velocity
+
+    Parameters
+    ----------
+    x : float, initial x position
+    y : float, initial y position
+    vx : float, initial x velocity
+    vy : float, initial y velocity
+    size : int or tuple, size of the object
+    """
     def __init__(self, x, y, vx, vy, size):
         self.x = x
         self.y = y
@@ -22,6 +33,18 @@ class Object:
 
 
 class Box:
+    """
+    Class Box that contains an object at a given position and velocity
+
+    Parameters
+    ----------
+    x : float, initial x position
+    y : float, initial y position
+    vx : float, initial x velocity
+    vy : float, initial y velocity
+    box_size : int or tuple, size of the box
+    object_size : int or tuple, size of the object
+    """
     def __init__(self, x, y, vx, vy, box_size, object_size):
         x = np.array(x, dtype=np.float64)
         y = np.array(y, dtype=np.float64)
@@ -85,6 +108,19 @@ class Box:
         return self.x, self.y
 
 class BouncingBall(Box):
+    """
+    Class BouncingBall that contains an object at a given position and velocity 
+    (randomly generated on the image) and that bounces on the walls of the box.
+
+    Parameters
+    ----------
+    x : float, initial x position
+    y : float, initial y position
+    vx : float, initial x velocity
+    vy : float, initial y velocity
+    box_size : int or tuple, size of the box
+    object_size : int or tuple, size of the object
+    """
     def __init__(self, x, y, vx, vy, box_size, object_size):
         super().__init__(x, y, vx, vy, box_size, object_size)
 
@@ -143,6 +179,20 @@ GRAVITY_ACCELERATION = 1.0e2
 FRICTION = 1.5
 
 class GravityHoleBall(Box):
+    """
+    Class GravityHoleBall that contains an object at a given position and velocity 
+    (randomly generated on the image) and that is attracted by a gravity hole.
+
+    Parameters
+    ----------
+    x : float, initial x position
+    y : float, initial y position
+    vx : float, initial x velocity
+    vy : float, initial y velocity
+    box_size : int or tuple, size of the box
+    object_size : int or tuple, size of the object
+    gravity_position : tuple, position of the gravity hole, default is the center of the box
+    """
     def __init__(self, x, y, vx, vy, box_size, object_size, gravity_position=None):
         super().__init__(x, y, vx, vy, box_size, object_size)
 

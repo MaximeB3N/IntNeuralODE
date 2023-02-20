@@ -6,6 +6,18 @@ from src.utils.utils import gaussian_density
 
 # Generation of the dataset of uniform gaussian ball over all the space 
 def create_gaussian_dataset(r_min, r_max, n_samples, size, margin=1., n_balls=1):
+    """ 
+    Create a dataset of gaussian balls randomly placed in the image
+
+    Parameters
+    ----------
+    r_min : float, minimum radius of the gaussian ball
+    r_max : float, maximum radius of the gaussian ball
+    n_samples : int, number of samples to generate
+    size : int, size of the image
+    margin : float, margin to leave between the ball and the border of the image
+    n_balls : int, number of balls to generate in the image
+    """
     samples = []
     indices_matrix = np.array([[i,j] for i in range(size) for j in range(size)])
     # print(indices_matrix)
@@ -32,6 +44,27 @@ def create_gaussian_dataset(r_min, r_max, n_samples, size, margin=1., n_balls=1)
 
 
 def generate_gravity_hole_ball_positions_and_velocity(box, N, N_frames, dt, infos):
+    """
+    Generate positions and velocities of a gravity hole ball.
+
+    Parameters
+    ----------
+    box : Box object
+    N : int, number of samples to generate
+    N_frames : int, number of frames to generate for each sample
+    dt : float, time step
+    infos : dict, contains all the information about the ball
+
+    Comments :
+        infos example : 
+        infos = {
+        "MARGIN_MIN":5,
+        "MIN_INIT_VELOCITY":200.,
+        "WIDTH":28,
+        "HEIGHT":28,
+        "RADIUS":3
+    }
+    """
     dataset = []
     
     for _ in trange(N):
@@ -61,17 +94,25 @@ def generate_gravity_hole_ball_positions_and_velocity(box, N, N_frames, dt, info
 
 def generate_gravity_hole_ball_images(box, N, N_frames, dt, infos, background_image=None):
     """
-    Generate images of a gravity hole ball.
+    Generate images of a gravity hole ball with the possibility to use a background image.
     
     Parameters
     ----------
-    infos example : 
-    infos = {
-    "MARGIN_MIN":5,
-    "MIN_INIT_VELOCITY":200.,
-    "WIDTH":28,
-    "HEIGHT":28,
-    "RADIUS":3
+    box : Box object
+    N : int, number of samples to generate
+    N_frames : int, number of frames to generate for each sample
+    dt : float, time step
+    infos : dict, contains all the information about the ball
+    background_image : np.array, background image to use
+
+    Comments :
+        infos example : 
+        infos = {
+        "MARGIN_MIN":5,
+        "MIN_INIT_VELOCITY":200.,
+        "WIDTH":28,
+        "HEIGHT":28,
+        "RADIUS":3
     }
     """
 
@@ -114,6 +155,17 @@ def generate_gravity_hole_ball_images(box, N, N_frames, dt, infos, background_im
 
 
 def add_average_velocity(trajectories, Num_pos_velocity, dt):
+    """
+    Concatenate the average velocity of the last Num_pos_velocity positions to the trajectories. 
+    Used in order to have all the information of the dynamics.
+
+    Parameters
+    ----------
+    trajectories : torch.Tensor, shape (N, N_frames, 2), the trajectories of the particles
+    Num_pos_velocity : int, number of positions used to compute the average velocity
+    dt : float, time step
+
+    """
     i = 0
 
     N_frames = trajectories.shape[1]
