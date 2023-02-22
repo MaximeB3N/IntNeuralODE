@@ -6,7 +6,20 @@ from .metrics import PSNR, SSIM
 
 
 def train_convnode(model, optimizers, scheduler, epochs, getter, display=100, loss_fn=None, display_results_fn=display_ode_trajectory, out_display=-1):
-    
+    """
+    Train function for a ConvNode like model.
+
+    Parameters
+    ----------
+    model : nn.Module, the model to train
+    optimizer : torch.optim, the optimizer to use
+    epochs : int, the number of epochs to train for
+    getter : utils.data.DataGetter, the data getter to use
+    display : int, the number of epochs between each display of the results
+    loss_fn : nn.Module, the loss function to use, default is MSELoss
+    display_results_fn : function, the function to use to display the results, default is display_ode_trajectory
+    out_display : int, the number of points to display, default is -1 (all points)
+    """
     device = model.device
 
     if out_display == -1:
@@ -59,6 +72,20 @@ def train_convnode(model, optimizers, scheduler, epochs, getter, display=100, lo
 
 
 def train_convnode_with_latent_supervision(model, optimizer, scheduler, epochs, getter, display=100, loss_fn=None, display_results_fn=display_ode_trajectory, out_display=-1):
+    """
+    Train function for a ConvNode like model with latent regularization.
+
+    Parameters
+    ----------
+    model : nn.Module, the model to train
+    optimizer : torch.optim, the optimizer to use
+    epochs : int, the number of epochs to train for
+    getter : utils.data.DataGetter, the data getter to use
+    display : int, the number of epochs between each display of the results
+    loss_fn : nn.Module, the loss function to use, default is MSELoss
+    display_results_fn : function, the function to use to display the results, default is display_ode_trajectory
+    out_display : int, the number of points to display, default is -1 (all points)
+    """
     
     device = model.device
 

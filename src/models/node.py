@@ -4,6 +4,24 @@ from torchdiffeq import odeint_adjoint
 
 
 class ODEfunc(nn.Module):
+
+    """
+    Neural ODE function f: R^d -> R^d used to learn the dynamics of the system.
+    It is a MLP with linear layers and relu activation (not depending on time t)
+
+    Parameters
+    ----------
+    in_dim : int, dimension of the input
+    mid_dim : list of int, dimension of the hidden layers
+    out_dim : int, dimension of the output
+
+    Comment : 
+       
+
+        If we note f_theta the neural network where theta is the parameters of the MLP, 
+        we have that f_theta is defined such that : 
+            dx/dt = f_theta(x)
+    """
     def __init__(self, in_dim, mid_dim, out_dim):
         super(ODEfunc, self).__init__()
         self.in_dim = in_dim
@@ -29,6 +47,14 @@ class ODEfunc(nn.Module):
 
 
 class ODEBlock(nn.Module):
+    """
+    Neural ODE block used to learn the dynamics of the system. It can use the ode function odefunc 
+    to simulate the underlying dynamics by feeding feeding the initial position x and the output times t.
+
+    Parameters
+    ----------
+    odefunc : ODEfunc, the neural network used to simulate the dynamics of the system
+    """
     def __init__(self, odefunc):
         super(ODEBlock, self).__init__()
         self.odefunc = odefunc
@@ -42,6 +68,16 @@ class ODEBlock(nn.Module):
 
 
 class ODEnetSimple(nn.Module):
+    """
+    Wrapper for the ODEBlock. It is used to learn the dynamics of the system and 
+    make sure that we can batchify the data to parallelize the computation.
+
+    Parameters
+    ----------
+    in_dim : int, dimension of the input
+    mid_dim : list of int, dimension of the hidden layers
+    out_dim : int, dimension of the output
+    """
     def __init__(self, in_dim, mid_dim, out_dim):
         super(ODEnetSimple, self).__init__()
 

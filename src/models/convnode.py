@@ -5,6 +5,19 @@ from .anode import ANODENet
 
 
 class TimeDistributed(nn.Module):
+
+    """
+    Time distributed wrapper for nn.Module to apply the same module to each time step. 
+    It helps to reduce the memory usage and speed up the training by having faster forward pass. 
+    (Necessary for ANODE as the shape of the input is [batch, time, channels, width, height] and we must appy the encoder to each time step,
+    similarly for the decoder but the shape is [batch, time, latent_dim])
+
+    Parameters
+    ----------
+    module : nn.Module, the module to apply to each time step
+    len_shape_without_batch : int, the length of the input shape without the batch dimension
+    batch_first : bool, if True, the input shape is [batch, time, *], otherwise [time, batch, *]
+    """
     def __init__(self, module, len_shape_without_batch, batch_first=False):
         super(TimeDistributed, self).__init__()
         self.module = module
@@ -41,6 +54,21 @@ class TimeDistributed(nn.Module):
         return y
 
 class ConvNodeApproxVelocity(nn.Module):
+    """
+    Convolutional with Neural ODE model for the latent space for appearance and velocity estimation.
+    In this model, the velocity is approximated as follows : dx/dt ≈ (x(t+Δt) - x(t))/Δt
+
+    Parameters
+    ----------
+    device : torch.device, the device to use
+    encoder : nn.Module, the encoder to use 
+    decoder : nn.Module, the decoder to use
+    size : int, the size of the input images
+    latent_dim : int, the dimension of the latent space
+    ode_hidden_dim : list of int, the dimension of the hidden layer of the ODE
+    ode_out_dim : int, the dimension of the output (and input) of the ODE
+    augment_dim : int, the dimension of the augmentation vector (cf anode.py for more explanations or [here](https://arxiv.org/abs/1904.01681)), default 0
+    """
     def __init__(self, device, encoder, decoder, size, latent_dim,
     ode_hidden_dim, ode_out_dim, augment_dim=0, ode_linear_layer=False,
     ode_non_linearity='relu', stack_size=1):
@@ -114,18 +142,41 @@ class ConvNodeApproxVelocity(nn.Module):
 
 
 class ConvNodeAppearance(nn.Module):
-    def __init__(self, device, encoder, decoder, layers, dynamics_dim, appearance_dim, in_channels, out_channels,
+    """
+    Convolutional with Neural ODE model for the latent space for appearance and dynamics estimation.
+    The former is kept and the latter is used to predict images using the Neural ODEs as dynamics creator.
+    At the end, the decoder used both the appearance latent and the simulated dynamics vectors.
+
+    Parameters
+    ----------
+    device : torch.device, the device to use
+    encoder : nn.Module, the encoder to use
+    decoder : nn.Module, the decoder to use
+    dynamics_dim : int, the dimension of the dynamics latent space 
+    (be caredul, it is not the same as its contribution to the latent space because we use the concatenation
+    of the position and the velocity inside the latent space, explaining the 2 factor below)
+    appearance_dim : int, the dimension of the appearance latent space
+    in_channels : int, the number of input channels
+    out_channels : int, the number of output channels
+    ode_hidden_dim : list of int, the dimension of the hidden layer of the ODE
+    ode_out_dim : int, the dimension of the output (and input) of the ODE
+    augment_dim : int, the dimension of the augmentation vector (cf anode.py for more explanations or [here](https://arxiv.org/abs/1904.01681)), default 0
+    time_dependent : bool, if True, the ODE is time dependent, default False
+    ode_linear_layer : bool, if True, the ODE is linear, default False
+    ode_non_linearity : str, the non linearity to use in the ODE, default 'relu'
+    conv_activation : nn.Module, the activation function to use in the convolutional layers, default nn.ReLU()
+
+    """
+    def __init__(self, device, encoder, decoder, dynamics_dim, appearance_dim, in_channels, out_channels,
     ode_hidden_dim, ode_out_dim, augment_dim=0, time_dependent=False, ode_linear_layer=False,
-    ode_non_linearity='relu', conv_activation=nn.ReLU(),latent_activation=None):
+    ode_non_linearity='relu', conv_activation=nn.ReLU()):
     
         super(ConvNodeAppearance, self).__init__()
         self.device = device
-        self.layers = layers
         self.dynamics_dim = dynamics_dim
         self.appearance_dim = appearance_dim
         self.in_channels = in_channels
         self.conv_activation = conv_activation
-        self.latent_activation = latent_activation
         self.ode_hidden_dim = ode_hidden_dim
         self.out_dim = ode_out_dim
         self.augment_dim = augment_dim
@@ -188,6 +239,9 @@ class ConvNodeAppearance(nn.Module):
         return reconstructed_images, sim
 
     def forward_diff_appearance(self, images_dyn, images_app, times, dt):
+        """
+        Forward pass to simulated samples using the dynamics of images_dyn and the appearance of images_app. 
+        """
         # Dynamics
         latent_z_dyn = self.encoder(images_dyn)
         latent_dynamics = latent_z_dyn[..., :2*self.dynamics_dim]

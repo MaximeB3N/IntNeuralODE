@@ -6,14 +6,24 @@ import matplotlib.pyplot as plt
 from tqdm.notebook import trange
 
 class Encoder(nn.Module):
+    """
+    Encoder model for the autoencoder using 3 convolutional layers and 1 linear layer.
+
+    Parameters
+    ----------
+    device : torch.device, the device to use
+    latent_dim : int, the dimension of the latent space
+    in_channels : int, the number of channels in the input
+    activation : nn.Module, the activation function to use, default is ReLU
+    
+    """
     def __init__(self, device, latent_dim, in_channels,
-                    activation=nn.ReLU(), relu=False):
+                    activation=nn.ReLU()):
         super(Encoder, self).__init__()
         self.device = device
         self.latent_dim = latent_dim
         self.in_channels = in_channels
         self.activation = activation
-        self.relu = relu
 
         self.encoder = nn.Sequential(
                     nn.Conv2d(in_channels=self.in_channels, out_channels=32, kernel_size=5, stride=2, padding=1),
@@ -42,13 +52,20 @@ class Encoder(nn.Module):
         out = self.encoder(image)
         # print(out.shape)
         latent = self.encoder_linear(out)
-        
-        if self.relu:
-            latent = torch.relu(latent)
 
         return latent
 
 class Decoder(nn.Module):
+    """
+    Decoder model for the autoencoder using 3 convolutional layers and 1 linear layer.
+
+    Parameters
+    ----------
+    device : torch.device, the device to use
+    latent_dim : int, the dimension of the latent space
+    in_channels : int, the number of channels in the input
+    activation : nn.Module, the activation function to use, default is ReLU
+    """
     def __init__(self, device, latent_dim, in_channels,
                     activation=nn.ReLU()):
         super(Decoder, self).__init__()
@@ -85,6 +102,10 @@ class Decoder(nn.Module):
             
 
 class ConvAE(nn.Module):
+    """
+    Convolutional autoencoder model using 3 convolutional layers and 1 linear layer both to encode and decode.
+    Implementation with everything wrapped in a single class (from the model to the training itself through the viz).
+    """
     def __init__(self, **kwargs):
         super().__init__()
         self.flatten = nn.Flatten()
@@ -96,12 +117,6 @@ class ConvAE(nn.Module):
             self.in_channels = kwargs['in_channels']
         else:
             self.in_channels = 3
-
-        if not kwargs['relu'] is None:
-            self.relu = True
-
-        else:
-            self.relu = False
 
         if isinstance(kwargs["activation"], nn.Module):
             self.activation = kwargs["activation"]
@@ -151,8 +166,6 @@ class ConvAE(nn.Module):
         # print(out.shape)
         latent = self.encoder_linear(out)
         
-        if self.relu:
-            latent = torch.relu(latent)
         # print(latent.shape)
         out = self.decoder_linear(latent)
         # print(out.shape)
@@ -261,6 +274,11 @@ class ConvAE(nn.Module):
         return losses_train, losses_test
 
 class ConvAEwithResNet(nn.Module):
+    """
+    Convolutional autoencoder model using a resnet18 with a linear layer to encode and 
+    3 convolutional layers and 1 linear layer both to decode.
+    Implementation with everything wrapped in a single class (from the model to the training itself through the viz).
+    """
     def __init__(self, **kwargs):
         super().__init__()
         self.flatten = nn.Flatten()
@@ -401,18 +419,3 @@ class ConvAEwithResNet(nn.Module):
         return losses_train, losses_test
 
 
-class custom_loss(nn.Module):
-    def __init__(self):
-        super(custom_loss, self).__init__()
-    
-    def forward(self, x, dec):
-        # dec = dec[:,0]
-        # x = x[:,0]
-        unreshaped = torch.reshape(dec, [-1, 28*28])
-        x = torch.reshape(x, [-1, 28*28])
-        # print(unreshaped.shape)
-        img_loss = torch.mean(torch.sum((unreshaped - x)**2, dim=1))
-        # print(img_loss.shape)
-        loss = torch.mean(img_loss)
-        # print(loss.shape)
-        return loss

@@ -4,7 +4,39 @@ import torch.nn as nn
 from torchvision.models import vgg16
 
 
+class CustomMSE(nn.Module):
+    """
+    Custom loss function using the MSE between the original image and the reconstructed image
+    and averaging over the batch size 
+    """
+    def __init__(self):
+        super(CustomMSE, self).__init__()
+    
+    def forward(self, x, dec):
+        # dec = dec[:,0]
+        # x = x[:,0]
+        unreshaped = torch.reshape(dec, [-1, 28*28])
+        x = torch.reshape(x, [-1, 28*28])
+        # print(unreshaped.shape)
+        img_loss = torch.mean(torch.sum((unreshaped - x)**2, dim=1))
+        # print(img_loss.shape)
+        loss = torch.mean(img_loss)
+        # print(loss.shape)
+        return loss
+
+
 class LatentRegularizerLoss(nn.Module):
+    """
+    Custom loss function using the MSE between the original image and the reconstructed image
+    and compute the L2 norm of the latent vector in order to regularize the latent space.
+
+    Parameters
+    ----------
+    device : torch.device, the device to use
+    reg_lambda : float, the regularization parameter
+    step_decay : int, the number of steps after which the regularization parameter is multiplied by decay_rate, default is 10.
+    decay_rate : float, the decay rate of the regularization parameter, default is 1.
+    """
     def __init__(self, device, reg_lambda=1e-5, step_decay=10, decay_rate=1.):
         super(LatentRegularizerLoss, self).__init__()
         self.device = device
@@ -47,6 +79,10 @@ class LatentRegularizerLoss(nn.Module):
         return None
 
 class CustomMSE(nn.Module):
+    """
+    Custom loss function using the MSE between the original image and the reconstructed image
+    and averaging over the batch size, we recall that images are of shape [batch, batch_time, in_channels, height, width]
+    """
     def __init__(self):
         super(CustomMSE, self).__init__()
 
@@ -58,6 +94,19 @@ class CustomMSE(nn.Module):
 
 
 class ImageFocusLatentRegularizerLoss(nn.Module):
+    """
+    Custom loss function using the MSE between the original image and the reconstructed image
+    but we put more importance toward the reconstruction of the sequence of images and less to the spatial encodings.
+    We also compute the L2 norm of the latent vector in order to regularize the latent space.
+
+    Parameters
+    ----------
+    device : torch.device, the device to use
+    reg_lambda : float, the regularization parameter
+    encoding_lambda : float, the importance of the spatial encoding
+    step_decay : int, the number of steps after which the regularization parameter is multiplied by decay_rate, default is 10.
+    decay_rate : float, the decay rate of the regularization parameter, default is 1.
+    """
     def __init__(self, device, reg_lambda=1e-5, encoding_lambda=0.01, step_decay=10, decay_rate=1.):
         super(ImageFocusLatentRegularizerLoss, self).__init__()
         self.device = device
@@ -126,6 +175,15 @@ class ImageFocusLatentRegularizerLoss(nn.Module):
 
 
 class LossPerceptual(torch.nn.Module):
+    """
+    Perceptual loss using the VGG16 network.
+
+    Parameters
+    ----------
+    device : torch.device, the device to use
+    vgg_model : torch.nn.Module, the VGG16 model to use, default is None
+    loss : torch.nn.Module, the loss function to use, default is nn.L1Loss()
+    """
     def __init__(self, device=None, vgg_model=None, loss=nn.L1Loss()):
         super(LossPerceptual, self).__init__()
         if device is None:
@@ -177,6 +235,17 @@ class LossPerceptual(torch.nn.Module):
 
 
 class LossWrapper(nn.Module):
+    """
+    Wrapper of multiple losses to simplify the training code.
+
+    Parameters
+    ----------
+    losses : list of torch.nn.Module, the losses to use
+    weights : list of float, the weights of the losses
+
+    Final loss : 
+        loss = sum(weights[i] * losses[i](latent_z, preds, trues))
+    """
     def __init__(self, losses, weights):
         super(LossWrapper, self).__init__()
 

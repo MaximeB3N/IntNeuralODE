@@ -11,6 +11,19 @@ from .utils import add_spatial_encoding, create_spatial_encoding
 
     
 class BatchGetterMultiImages:
+    """
+    Class to get batches of data for the Convoluational Neural ODE Network Autoencoder.
+
+    Parameters
+    ----------
+    batch_time : int, the number of time steps in the batch
+    batch_size : int, the number of trajectories in the batch
+    n_stack : int, the number of images to stack
+    total_length : int, the total number of time steps
+    dt : float, the time step
+    images : torch.Tensor, shape (N, T, D), the images of the trajectories
+    frac_train : float, the fraction of the data to use for training
+    """
     def __init__(self, batch_time, batch_size, n_stack, total_length, dt, images, frac_train):
         # N: number of trajectories
         # M: number of time steps
@@ -40,6 +53,16 @@ class BatchGetterMultiImages:
 
     
     def get_batch(self):
+        """
+        Returns a batch of data for the Convolutional Neural ODE Network Autoencoder.
+
+        Returns
+        -------
+        batch_y0 : torch.Tensor, shape (batch_size, n_stack, D), the initial conditions of the trajectories
+        (n_stack because we may use more than one image in order to compute the dynamics, at least 2 are required)
+        batch_t : torch.Tensor, shape (batch_time), the time steps of the trajectories
+        batch_y : torch.Tensor, shape (batch_time, batch_size, D), the true positions of the trajectories
+        """
         index = np.random.randint(0, self.N_train, self.batch_size)
         s = torch.from_numpy(np.random.choice(np.arange(self.train_times.shape[0] - self.batch_time, dtype=np.int64), 1, replace=False))
         batch_y0 = self.train_images[index, s:s+self.n_stack+1].squeeze(0) # (M, D)
@@ -52,6 +75,17 @@ class BatchGetterMultiImages:
 # Own Moving MNIST dataset (using only test set)        
 # ----------------------------------------------------------------------------------------------------------------------
 class MovingMNIST:
+    """
+    Class to use an already simulated Moving MNIST dataset.
+
+    Parameters
+    ----------
+    input_length : int, the number of time steps in the input (provided to the model)
+    target_length : int, the number of time steps in the target (to predict)
+    is_train : bool, whether to use the training set or the test set
+    train_rate : float, the fraction of the data to use for training
+    path_data : str, the path to the data
+    """
     def __init__(self, input_length=10, target_length=10, is_train=True, train_rate=0.8, path_data="data/mnist_test_seq.npy"):
         assert target_length + input_length <= 20, f"The dataset has only 20 frames per sequence and not {target_length + input_length}"
 
@@ -115,6 +149,9 @@ class MovingMNIST:
 # ----------------------------------------------------------------------------------------------------------------------
 
 def load_mnist(root):
+    """
+    Load MNIST dataset for generating data.
+    """
     # Load MNIST dataset for generating training data.
     path = os.path.join(root, 'train-images-idx3-ubyte.gz')
     with gzip.open(path, 'rb') as f:
@@ -124,6 +161,9 @@ def load_mnist(root):
 
 
 def load_fixed_set(root, is_train):
+    """
+    Load the fixed dataset that will be used for testing.
+    """
     # Load the fixed dataset
     filename = 'mnist_test_seq.npy'
     path = os.path.join(root, filename)
@@ -133,7 +173,27 @@ def load_fixed_set(root, is_train):
 
 
 class NewMovingMNIST(data.Dataset):
-    def __init__(self, root, is_train=True, n_frames_input=10, n_frames_output=10, spatial_depth=0, num_objects=[2], transform=None):
+    """
+    Class to simulate the Moving MNIST dataset using the MNIST dataset. 
+    The dataset is simulated by randomly selecting a digit from the MNIST dataset and moving it around.
+    It was done in the same way as in the paper "[Disentangling Physical Dynamics from Unknown Factors for Unsupervised Video Prediction](https://arxiv.org/pdf/2003.01460.pdf)".
+
+    Parameters
+    ----------
+    root : str, the path to the data
+    is_train : bool, whether to use the training set or the test set, if false, the fixed test set is used, if true, data is generated on the fly.
+    n_frames_input : int, the number of frames in the input sequence (provided to the model)
+    n_frames_output : int, the number of frames in the target sequence (to predict)
+    spatial_depth : int, the number of spatial encoding channels to add to the input and target, default is 0
+    num_objects : list, the number of objects to use in the dataset to generate one trajectory, default is [2]
+    transform : callable, optional, transform to be applied on a sample.
+    """
+    # input_length : int, the number of time steps in the input (provided to the model)
+    # target_length : int, the number of time steps in the target (to predict)
+    # train_rate : float, the fraction of the data to use for training
+    # path_data : str, the path to the data
+    # """
+    def __init__(self, root, is_train=True, n_frames_input=10, n_frames_output=10, spatial_depth=1, num_objects=[2], transform=None):
         '''
         param num_objects: a list of number of possible objects.
         '''
@@ -165,8 +225,10 @@ class NewMovingMNIST(data.Dataset):
         self.dt = self.step_length_
 
         self.batch_time = torch.linspace(self.step_length_, (self.n_frames_output)*self.step_length_, self.n_frames_output).float()
-        self.spatial_encodings = create_spatial_encoding(self.image_size_, spatial_depth)
-        self.spatial_encodings = torch.from_numpy(np.array(self.spatial_encodings)).unsqueeze(1)
+        
+        if self.spatial_depth != 0:
+            self.spatial_encodings = create_spatial_encoding(self.image_size_, spatial_depth - 1)
+            self.spatial_encodings = torch.from_numpy(np.array(self.spatial_encodings)).unsqueeze(1)
 
 
     def get_random_trajectory(self, seq_length):
@@ -266,7 +328,10 @@ class NewMovingMNIST(data.Dataset):
         # print("input data 1 shape: ", input_data.shape)
         # Transfrom the input to be of shape (len_seq, target_length + 2, 64, 64) with spatial encoding
         # print("input data shape: ", input.shape, "spatial encoding shape: ", self.spatial_encoding_x.shape, self.spatial_encoding_y.shape)
-        input = torch.cat([input.squeeze(), *self.spatial_encodings], dim=0).float()
+        
+        if self.spatial_depth != 0:
+            input = torch.cat([input.squeeze(), *self.spatial_encodings], dim=0).float()
+
         # print("input data 1 shape: ", input_data.shape)
         # Add the spatial encoding to the target
         # output = torch.from_numpy(add_spatial_encoding(output.cpu().numpy(), depth=0)).float()

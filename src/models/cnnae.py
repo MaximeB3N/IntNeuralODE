@@ -5,72 +5,83 @@ import numpy as np
 
 
 class Encoder(nn.Module):
+    """
+    Convolutional Encoder using 3 blocks of 2 convolutional layers each, batch normalization and max pooling.
+    (It was used for images of size 64x64)
+
+        Parameters
+        ----------
+        device : torch.device, the device to use
+        latent_dim : int, the dimension of the latent space
+        in_channels : int, the number of channels in the input
+        activation : nn.Module, the activation function to use, default is ReLU
+        relu : bool, whether to use ReLU or not, default is False
+    """
     def __init__(self, device, latent_dim, in_channels,
-                    activation=nn.ReLU(), relu=False):
+                        activation=nn.ReLU(), relu=False):
         super(Encoder, self).__init__()
         self.device = device
         self.latent_dim = latent_dim
         # self.appearance_dim = appearance_dim
         self.in_channels = in_channels
         self.activation = activation
-        self.relu = relu
 
         self.encoder = nn.Sequential(
-            # first block
-                    nn.Conv2d(in_channels=self.in_channels, out_channels=64, kernel_size=3, stride=1, padding=0),
-                    self.activation,
-                    nn.BatchNorm2d(64),
-                    # nn.MaxPool2d(kernel_size=2, stride=2),
-                    nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
-                    self.activation,
-                    nn.BatchNorm2d(64),
-                    nn.MaxPool2d(kernel_size=2, stride=2),
+                # first block
+                        nn.Conv2d(in_channels=self.in_channels, out_channels=64, kernel_size=3, stride=1, padding=0),
+                        self.activation,
+                        nn.BatchNorm2d(64),
+                        # nn.MaxPool2d(kernel_size=2, stride=2),
+                        nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
+                        self.activation,
+                        nn.BatchNorm2d(64),
+                        nn.MaxPool2d(kernel_size=2, stride=2),
 
-            # second block
-                    nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=0),
-                    self.activation,
-                    nn.BatchNorm2d(128),
-                    # nn.MaxPool2d(kernel_size=2, stride=2),
-                    nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=0),
-                    self.activation,
-                    nn.BatchNorm2d(128),
-                    nn.MaxPool2d(kernel_size=2, stride=2),
+                # second block
+                        nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=0),
+                        self.activation,
+                        nn.BatchNorm2d(128),
+                        # nn.MaxPool2d(kernel_size=2, stride=2),
+                        nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=0),
+                        self.activation,
+                        nn.BatchNorm2d(128),
+                        nn.MaxPool2d(kernel_size=2, stride=2),
 
-            # third block
-                    nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=0),
-                    self.activation,
-                    nn.BatchNorm2d(256),
-                    # nn.MaxPool2d(kernel_size=2, stride=2),
-                    nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=0),
-                    self.activation,
-                    nn.BatchNorm2d(256),
-                    nn.MaxPool2d(kernel_size=2, stride=2),
+                # third block
+                        nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=0),
+                        self.activation,
+                        nn.BatchNorm2d(256),
+                        # nn.MaxPool2d(kernel_size=2, stride=2),
+                        nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=0),
+                        self.activation,
+                        nn.BatchNorm2d(256),
+                        nn.MaxPool2d(kernel_size=2, stride=2),
 
         ).to(device)
-        
-                    # nn.Conv2d(in_channels=self.in_channels, out_channels=32, kernel_size=7, stride=2, padding=1),
-                    # self.activation,
-                    # # nn.MaxPool2d(kernel_size=2, stride=2),
-                    # nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=1),
-                    # self.activation,
-                    # # nn.MaxPool2d(kernel_size=2, stride=2),
-                    # nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1),
-                    # self.activation,
-                    # nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1),
-                    # self.activation,
-                    # nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=0),
-                    # self.activation
-                    # # nn.MaxPool2d(kernel_size=2, stride=2),
+
+                        # nn.Conv2d(in_channels=self.in_channels, out_channels=32, kernel_size=7, stride=2, padding=1),
+                        # self.activation,
+                        # # nn.MaxPool2d(kernel_size=2, stride=2),
+                        # nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=1),
+                        # self.activation,
+                        # # nn.MaxPool2d(kernel_size=2, stride=2),
+                        # nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1),
+                        # self.activation,
+                        # nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1),
+                        # self.activation,
+                        # nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=0),
+                        # self.activation
+                        # # nn.MaxPool2d(kernel_size=2, stride=2),
         self.encoder_dynamics = nn.Sequential(
-                    nn.Flatten(),
-                    nn.Linear(in_features=256*4*4, out_features=self.latent_dim),
+                        nn.Flatten(),
+                        nn.Linear(in_features=256*4*4, out_features=self.latent_dim),
         ).to(device)
 
         # self.encoder_appearance = nn.Sequential(
         #             nn.Flatten(),
         #             nn.Linear(in_features=2*2*512, out_features=self.appearance_dim),
         # ).to(device)
-        
+
         # print the number of parameters in the model
         print("Number of parameters in the encoder model: {}".format(np.sum([p.numel() for p in self.parameters() if p.requires_grad])))
 
@@ -90,6 +101,18 @@ class Encoder(nn.Module):
         return stacked_tensor
 
 class Decoder(nn.Module):
+    """
+    Convolutional Decoder using 3 blocks of 2 transpose convolutional layers each, batch normalization and upsampling. 
+    (It was used for images of size 64x64)
+
+    Parameters
+    ----------
+    device : torch.device, the device to use
+    latent_dim : int, the dimension of the latent space
+    out_channels : int, the number of channels in the output
+    activation : nn.Module, the activation function to use, default is ReLU
+        
+    """
     def __init__(self, device, latent_dim, out_channels,
                     activation=nn.ReLU()):
         super(Decoder, self).__init__()

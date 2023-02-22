@@ -18,7 +18,9 @@ class ODEFunc(nn.Module):
         Dimension of hidden layers.
     augment_dim: int
         Dimension of augmentation. If 0 does not augment ODE, otherwise augments
-        it with augment_dim dimensions.
+        it with augment_dim dimensions. (it is useful to use augmentation because it 
+        add additional dimensions to our input leading to less constraints during the optimisation of the parameters cf paper
+        Augmented Neural ODEs: [link](https://arxiv.org/abs/1904.01681))
     time_dependent : bool
         If True adds time as input, making ODE time dependent.
     non_linearity : string

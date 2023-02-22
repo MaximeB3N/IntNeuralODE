@@ -298,13 +298,12 @@ if __name__ == "__main__":
 
     
     
-    layers_encoder = config["layers_encoder"]
     ode_out_dim = dim_dynamic
     ode_hidden_dim = config["ode_hidden_dim"]
     augment_dim = config["augment_dim"]
 
     print("-"*50 + "\n", "Creating ConvNODE with appearance model...")
-    convnode = ConvNodeAppearance(device, encoder, decoder, layers_encoder,
+    convnode = ConvNodeAppearance(device, encoder, decoder,
                                 dim_dynamic, dim_appearance, input_length + 2, 
                                 out_channels, ode_hidden_dim, ode_out_dim, augment_dim=augment_dim).to(device)
 

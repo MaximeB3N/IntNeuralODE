@@ -4,6 +4,10 @@ import numpy as np
 
 
 def gaussian_density(x, mu, sigma):
+    """
+    Compute the gaussian density of a point x given a mean mu and a standard deviation sigma and build an image of it.
+    This function is used to generate the dataset that moves the gaussian ball.
+    """
     return torch.exp(-torch.norm(torch.tensor(x - mu).float(), dim=1)**2/(2*sigma**2))/(2*np.pi*sigma**2)
 
 def create_spatial_encoding(size, depth=0):
@@ -25,6 +29,14 @@ def create_spatial_encoding(size, depth=0):
     return spatial_encodings
 
 def add_spatial_encoding(gaussian_dataset, depth=0):
+    """
+    Add spatial encoding to the gaussian dataset.
+    
+    Parameters
+    ----------
+    gaussian_dataset : list, contains the gaussian dataset
+    depth : int, depth of the spatial encoding
+    """
     n_images = len(gaussian_dataset)
 
     
@@ -59,15 +71,22 @@ def add_spatial_encoding(gaussian_dataset, depth=0):
     elif len(gaussian_dataset[0]) == 1:
         return np.array(samples)
 
-def stack_dataset(gaussian_dataset):
-    n_images = len(gaussian_dataset)
-    size = gaussian_dataset[0][0].shape[1]
+def stack_dataset(img_dataset):
+    """
+    Stack the dataset to have 3 channels by copying the first channel 3 times. (Gray to RGB)
+
+    Parameters
+    ----------
+    gaussian_dataset : list, contains the image dataset
+    """
+    n_images = len(img_dataset)
+    size = img_dataset[0][0].shape[1]
 
     samples = []
 
     for i in range(n_images):
-        old_image = np.array(gaussian_dataset[i][0].squeeze())
+        old_image = np.array(img_dataset[i][0].squeeze())
         new_image = np.stack([old_image.copy(), old_image.copy(), old_image.copy()], axis=0)
-        samples.append([new_image, gaussian_dataset[i][1]])
+        samples.append([new_image, img_dataset[i][1]])
 
     return samples

@@ -91,6 +91,18 @@ def plot_tsne_and_pca_portrait(times, tsne_encoded_trajectory, pca_encoded_traje
 
 def display_ode_trajectory(i, model, out_display, getter, final_time, dt):
 
+    """
+    Display the trajectory of the ODE model at epoch i, used when the model was only an ODE and inputs were the positions.
+
+    Parameters
+    ----------
+    i : int, epoch number
+    model : torch.nn.Module, the model to display
+    out_display : int, number of coordinates to display
+    getter : torch.utils.data.Dataset, the dataset to display
+    final_time : int, the final time of the trajectory
+    dt : float, the time step of the trajectory
+    """
     print("The graphs at epoch {}".format(i))
     with torch.no_grad():
         index = np.random.randint(0, getter.N_train)
@@ -146,7 +158,21 @@ def display_ode_trajectory(i, model, out_display, getter, final_time, dt):
         
 
 def display_convnode_trajectory(i, model, out_display, getter, final_time, dt, root=None, name=None):
-    
+    """
+    Display the trajectory inside the latent space of the ConvNode model at epoch i and 
+    comparing it with the trajectory of the true images encoded in the latent space.
+
+    Parameters
+    ----------
+    i : int, epoch number
+    model : torch.nn.Module, the model to display
+    out_display : int, number of coordinates to display
+    getter : torch.utils.data.Dataset, the dataset to display
+    final_time : int, the final time of the trajectory
+    dt : float, the time step of the trajectory
+    root : str, the root directory to save the images
+    name : str, the name of the image to save
+    """
     device = model.device
     model.eval()
     print("The graphs at epoch {}".format(i))
@@ -225,6 +251,21 @@ def display_convnode_trajectory(i, model, out_display, getter, final_time, dt, r
             plt.close()
 
 def generate_interactive_plot(i, model, out_display, getter, final_time, dt, root=None, name=None):
+    """
+    Wrapper to create an interactive plot of the simulated images of the ConvNode model at epoch i. 
+    It plots an image depending on the time slider position.
+
+    Parameters
+    ----------
+    i : int, epoch number
+    model : torch.nn.Module, the model to display
+    out_display : int, number of coordinates to display
+    getter : torch.utils.data.Dataset, the dataset to display
+    final_time : int, the final time of the trajectory
+    dt : float, the time step of the trajectory
+    root : str, the root directory to save the images
+    name : str, the name of the image to save (not used here but needed to be compatible with the other functions)
+    """
     index = np.random.randint(0, getter.N_train)
     time_steps = np.linspace(0, final_time*dt, final_time)
 
@@ -239,6 +280,16 @@ def generate_interactive_plot(i, model, out_display, getter, final_time, dt, roo
 
 
 def interactive_part_trajectory_image_plot(inputs_images, reconstructed_images, time_steps, dt):
+    """
+    Function to create an interactive plot of the simulated images of the ConvNode model at epoch i.
+
+    Parameters
+    ----------
+    inputs_images : torch.Tensor, the input images of the model
+    reconstructed_images : torch.Tensor, the predicted images of the model
+    time_steps : np.array, the time steps of the trajectory
+    dt : float, the time step of the trajectory
+    """
     fig = make_subplots(rows=1, cols=3, subplot_titles=("Input image", "Predicted image"))
     fig = go.FigureWidget(fig)
     # add a black background to the figure
@@ -266,6 +317,15 @@ def interactive_part_trajectory_image_plot(inputs_images, reconstructed_images, 
 
 def display_auto_encoder_reconstruction(model, dataset, N_samples_recon):
 
+    """
+    Display the reconstruction of the autoencoder model on the dataset.
+
+    Parameters
+    ----------
+    model : torch.nn.Module, the model to display
+    dataset : torch.utils.data.Dataset, the dataset to display
+    N_samples_recon : int, the number of samples to display
+    """
     # use the VAE to reconstruct images and there initial images
     N_samples_recon = 6
     plot_loader = DataLoader(dataset, batch_size=N_samples_recon)
@@ -304,6 +364,20 @@ def display_auto_encoder_reconstruction(model, dataset, N_samples_recon):
 
 
 def plot_extrapolation(root_plot, ground_truth_sequence, prediction_sequence, input_size=10, num_traj_plot=1, image_name=None):
+    """
+    Plot the extrapolation of the model on the dataset by plotting the ground truth followed by the predictions
+    (a red bar is added to separate the ground truth from the predictions).
+
+    Parameters
+    ----------
+    root_plot : str, the root directory to save the images
+    ground_truth_sequence : torch.Tensor, the ground truth sequence of the model
+    prediction_sequence : torch.Tensor, the predicted sequence of the model
+    input_size : int, the size of the input sequence
+    num_traj_plot : int, the number of trajectories to plot
+    image_name : str, the name of the image to save
+    """
+
     # assert ground_truth_sequence.shape == prediction_sequence.shape
     assert (ground_truth_sequence.shape[0] == num_traj_plot and ground_truth_sequence.ndim == 5) or ground_truth_sequence.ndim == 4
 
